@@ -1,54 +1,32 @@
 "use client";
 
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useFormStatus } from "react-dom";
+import { signInWithGoogle } from "./actions";
 
 export function GoogleSignInButton() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleClick() {
-    setError(null);
-    setLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/`,
-        queryParams: { prompt: "select_account" },
-      },
-    });
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    }
-  }
-
   return (
-    <>
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={loading}
-        className="flex items-center justify-center gap-3 w-full px-4 py-3 rounded-[6px] transition-all text-[14px] font-medium hover:brightness-[0.97] disabled:opacity-60 disabled:cursor-not-allowed"
-        style={{
-          background: "var(--color-burgundy)",
-          color: "var(--color-bg)",
-          border: "1px solid var(--color-burgundy)",
-        }}
-      >
-        <GoogleIcon />
-        {loading ? "Redirigiendo…" : "Acceder con Google"}
-      </button>
-      {error ? (
-        <div
-          className="mt-3 text-[12px]"
-          style={{ color: "var(--color-burgundy)" }}
-        >
-          {error}
-        </div>
-      ) : null}
-    </>
+    <form action={signInWithGoogle}>
+      <SubmitButton />
+    </form>
+  );
+}
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="flex items-center justify-center gap-3 w-full px-4 py-3 rounded-[6px] transition-all text-[14px] font-medium hover:brightness-[0.97] disabled:opacity-60 disabled:cursor-not-allowed"
+      style={{
+        background: "var(--color-burgundy)",
+        color: "var(--color-bg)",
+        border: "1px solid var(--color-burgundy)",
+      }}
+    >
+      <GoogleIcon />
+      {pending ? "Redirigiendo…" : "Acceder con Google"}
+    </button>
   );
 }
 
