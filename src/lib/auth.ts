@@ -1,11 +1,26 @@
-export const ALLOWED_EMAILS = [
-  "ezra@ramiro.studio",
-  "marcos@ramiro.studio",
-] as const;
+import { createClient } from "@/lib/supabase/server";
 
-export function isAllowedEmail(email: string | null | undefined): boolean {
+export async function isAuthorizedEmail(email: string | null | undefined): Promise<boolean> {
   if (!email) return false;
-  return ALLOWED_EMAILS.includes(
-    email.toLowerCase() as (typeof ALLOWED_EMAILS)[number],
-  );
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("users")
+    .select("is_active")
+    .eq("email", email.toLowerCase())
+    .maybeSingle();
+  return !!data?.is_active;
+}
+
+export async function getCurrentUser() {
+  const supabase = await createClient();
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.getUser();
+  if (!authUser?.email) return null;
+  const { data } = await supabase
+    .from("users")
+    .select("*")
+    .eq("email", authUser.email.toLowerCase())
+    .maybeSingle();
+  return data;
 }

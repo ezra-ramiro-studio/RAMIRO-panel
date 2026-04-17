@@ -3,41 +3,72 @@ import { notFound } from "next/navigation";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
+import { TaskDialog } from "@/components/dialogs/TaskDialog";
+import { PaymentDialog } from "@/components/dialogs/PaymentDialog";
+import { MaintenanceDialog } from "@/components/dialogs/MaintenanceDialog";
+import { ProjectFileDialog } from "@/components/dialogs/ProjectFileDialog";
+import { DecisionDialog } from "@/components/dialogs/DecisionDialog";
+import { CommunicationDialog } from "@/components/dialogs/CommunicationDialog";
+import { ProjectDialog } from "@/components/dialogs/ProjectDialog";
+import { ChangePhaseDialog } from "@/components/actions/ChangePhaseDialog";
+import { TaskToggleButton } from "@/components/actions/TaskToggleButton";
+import { MarkPaymentPaidButton } from "@/components/actions/MarkPaymentPaidButton";
 import {
-  auditLog,
-  communications,
-  decisions,
-  maintenancePayments,
-  maintenances,
-  projectFiles,
-} from "@/lib/mock";
-import {
+  fetchAccounts,
+  fetchClients,
+  fetchProjects,
+  fetchUsers,
   getClient,
   getProject,
-  getUser,
   paymentsByProject,
   tasksByProject,
+  projectFiles as projectFilesByProject,
+  decisionsByProject,
+  communicationsByProject,
+  maintenancesByProject,
+  fetchMaintenancePayments,
 } from "@/lib/queries";
-import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { PHASES, type ProjectPhase } from "@/lib/types";
 
 type Params = { id: string };
 
 export default async function ProjectDetail({ params }: { params: Promise<Params> }) {
   const { id } = await params;
-  const project = getProject(id);
+  const project = await getProject(id);
   if (!project) return notFound();
-  const client = getClient(project.client_id);
-  const responsible = getUser(project.responsible_id);
-  const tasks = tasksByProject(id);
-  const payments = paymentsByProject(id);
-  const files = projectFiles.filter((f) => f.project_id === id);
-  const projectDecisions = decisions.filter((d) => d.project_id === id);
-  const comms = communications.filter((c) => c.project_id === id);
-  const projectAudit = auditLog
-    .filter((a) => a.entity_id === id || a.description.toLowerCase().includes(project.name.toLowerCase()))
-    .sort((a, b) => b.created_at.localeCompare(a.created_at));
-  const projectMaints = maintenances.filter((m) => m.project_id === id);
+
+  const [
+    client,
+    users,
+    tasks,
+    payments,
+    files,
+    projectDecisions,
+    comms,
+    projectMaints,
+    allMaintPayments,
+    accounts,
+    clients,
+    projects,
+  ] = await Promise.all([
+    getClient(project.client_id),
+    fetchUsers(),
+    tasksByProject(id),
+    paymentsByProject(id),
+    projectFilesByProject(id),
+    decisionsByProject(id),
+    communicationsByProject(id),
+    maintenancesByProject(id),
+    fetchMaintenancePayments(),
+    fetchAccounts(),
+    fetchClients(),
+    fetchProjects(),
+  ]);
+
+  const userById = (uid: string | null | undefined) =>
+    uid ? users.find((u) => u.id === uid) ?? null : null;
+  const responsible = userById(project.responsible_user_id);
   const phaseLabel = (p: ProjectPhase) => PHASES.find((x) => x.key === p)?.label ?? p;
 
   const priorityTone: Record<string, "red" | "gold" | "cyan" | "muted"> = {
@@ -46,6 +77,11 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
     media: "cyan",
     baja: "muted",
   };
+
+  const monthLabel = (year: number, month: number) =>
+    new Intl.DateTimeFormat("es-AR", { month: "short", year: "2-digit" }).format(
+      new Date(year, month - 1, 1),
+    );
 
   return (
     <div className="flex flex-col gap-8">
@@ -69,26 +105,35 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
               <Pill tone={project.status === "activo" ? "fin" : "muted"}>{project.status}</Pill>
               <Pill tone="ops">{phaseLabel(project.phase)}</Pill>
               <Pill tone="muted">
-                {formatDate(project.start_date)}
+                {project.start_date ? formatDate(project.start_date) : "sin inicio"}
                 {project.end_date && ` → ${formatDate(project.end_date)}`}
               </Pill>
-              <Pill tone="grow">{responsible?.name}</Pill>
+              {responsible && <Pill tone="grow">{responsible.name}</Pill>}
             </div>
           </div>
-          <div className="text-right">
-            <div className="mono text-[0.62rem] uppercase tracking-wider text-[var(--color-muted)]">
-              Total
+          <div className="flex items-start gap-3">
+            <div className="text-right">
+              <div className="mono text-[0.62rem] uppercase tracking-wider text-[var(--color-muted)]">
+                Total
+              </div>
+              <div className="display text-xl font-bold mt-1">
+                {formatCurrency(project.total_amount, project.currency)}
+              </div>
             </div>
-            <div className="display text-xl font-bold mt-1">
-              {formatCurrency(project.total_amount, project.currency)}
-            </div>
+            <ProjectDialog
+              project={project}
+              clients={clients}
+              users={users}
+              trigger={<Button variant="ghost">Editar</Button>}
+            />
           </div>
         </div>
       </div>
 
-      {/* 1. Fases */}
       <Card>
-        <CardTitle badge={<Button variant="ghost">Cambiar fase</Button>}>Fases</CardTitle>
+        <CardTitle badge={<ChangePhaseDialog projectId={project.id} currentPhase={project.phase} />}>
+          Fases
+        </CardTitle>
         <div className="flex items-center flex-wrap gap-2">
           {PHASES.filter((p) => p.key !== "archivado").map((p, i, arr) => {
             const active = project.phase === p.key;
@@ -128,11 +173,15 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
         </div>
       </Card>
 
-      {/* 2. Tareas */}
       <Card padding={false}>
         <div className="px-5 pt-5 pb-3 flex items-center justify-between">
           <h3 className="display text-[0.95rem] font-semibold">Tareas</h3>
-          <Button tone="ops">+ Nueva tarea</Button>
+          <TaskDialog
+            projects={projects}
+            users={users}
+            defaultProjectId={project.id}
+            trigger={<Button tone="ops">+ Nueva tarea</Button>}
+          />
         </div>
         {tasks.length === 0 ? (
           <div className="px-5 pb-5 text-[0.8rem] text-[var(--color-muted)]">Sin tareas.</div>
@@ -144,17 +193,18 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
                 <Th>Asignado</Th>
                 <Th>Prioridad</Th>
                 <Th>Estado</Th>
-                <Th>Fecha límite</Th>
+                <Th>Vence</Th>
+                <Th>&nbsp;</Th>
               </tr>
             </thead>
             <tbody>
               {tasks.map((t) => {
-                const u = getUser(t.assigned_to);
+                const u = userById(t.assigned_to);
                 return (
                   <tr key={t.id} className="border-t border-[var(--color-border-1)]">
                     <td className="px-5 py-3 text-[0.85rem]">{t.title}</td>
                     <td className="px-5 py-3">
-                      <Pill tone={u?.color ?? "muted"}>{u?.name}</Pill>
+                      {u ? <Pill tone={u.color ?? "muted"}>{u.name}</Pill> : <span className="text-[var(--color-muted)] text-[0.75rem]">—</span>}
                     </td>
                     <td className="px-5 py-3">
                       <Pill tone={priorityTone[t.priority]}>{t.priority}</Pill>
@@ -164,7 +214,12 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
                         {t.status.replace("_", " ")}
                       </Pill>
                     </td>
-                    <td className="px-5 py-3 text-[0.8rem]">{formatDate(t.due_date)}</td>
+                    <td className="px-5 py-3 text-[0.8rem]">
+                      {t.due_date ? formatDate(t.due_date) : "—"}
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <TaskToggleButton id={t.id} done={t.status === "completada"} />
+                    </td>
                   </tr>
                 );
               })}
@@ -173,11 +228,14 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
         )}
       </Card>
 
-      {/* 3. Pagos */}
       <Card padding={false}>
         <div className="px-5 pt-5 pb-3 flex items-center justify-between">
           <h3 className="display text-[0.95rem] font-semibold">Pagos</h3>
-          <Button tone="fin">+ Registrar hito</Button>
+          <PaymentDialog
+            projects={projects}
+            defaultProjectId={project.id}
+            trigger={<Button tone="fin">+ Registrar hito</Button>}
+          />
         </div>
         {payments.length === 0 ? (
           <div className="px-5 pb-5 text-[0.8rem] text-[var(--color-muted)]">Sin pagos.</div>
@@ -190,18 +248,20 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
                 <Th>Fecha</Th>
                 <Th>Estado</Th>
                 <Th>Cobrado por</Th>
+                <Th>&nbsp;</Th>
               </tr>
             </thead>
             <tbody>
               {payments.map((p) => {
-                const u = p.collected_by ? getUser(p.collected_by) : null;
+                const u = userById(p.collected_by);
+                const fecha = p.paid_at ?? p.due_date;
                 return (
                   <tr key={p.id} className="border-t border-[var(--color-border-1)]">
                     <td className="px-5 py-3 text-[0.85rem]">{p.description}</td>
                     <td className="px-5 py-3 mono text-[0.8rem]">
                       {formatCurrency(p.amount, p.currency)}
                     </td>
-                    <td className="px-5 py-3 text-[0.8rem]">{formatDate(p.scheduled_date)}</td>
+                    <td className="px-5 py-3 text-[0.8rem]">{fecha ? formatDate(fecha) : "—"}</td>
                     <td className="px-5 py-3">
                       <Pill tone={p.status === "cobrado" ? "fin" : p.status === "vencido" ? "red" : "yellow"}>
                         {p.status}
@@ -209,6 +269,11 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
                     </td>
                     <td className="px-5 py-3">
                       {u ? <Pill tone={u.color ?? "muted"}>{u.name}</Pill> : <span className="text-[var(--color-muted)] text-[0.75rem]">—</span>}
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      {p.status !== "cobrado" && (
+                        <MarkPaymentPaidButton id={p.id} accounts={accounts} />
+                      )}
                     </td>
                   </tr>
                 );
@@ -218,36 +283,43 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
         )}
       </Card>
 
-      {/* 4. Mantenimiento (solo si soporte) */}
       {project.phase === "soporte" && (
         <Card padding={false}>
           <div className="px-5 pt-5 pb-3 flex items-center justify-between">
             <h3 className="display text-[0.95rem] font-semibold">Mantenimiento mensual</h3>
-            <Button tone="fin">+ Nuevo mantenimiento</Button>
+            <MaintenanceDialog
+              clients={clients}
+              projects={projects}
+              defaultClientId={project.client_id}
+              defaultProjectId={project.id}
+              trigger={<Button tone="fin">+ Nuevo mantenimiento</Button>}
+            />
           </div>
           {projectMaints.length === 0 ? (
             <div className="px-5 pb-5 text-[0.8rem] text-[var(--color-muted)]">Sin contratos.</div>
           ) : (
             <div className="border-t border-[var(--color-border-1)]">
               {projectMaints.map((m) => {
-                const payments = maintenancePayments.filter((mp) => mp.maintenance_id === m.id);
+                const mpayments = allMaintPayments.filter((mp) => mp.maintenance_id === m.id);
                 return (
                   <div key={m.id} className="px-5 py-4 border-b border-[var(--color-border-1)] last:border-b-0">
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="display font-semibold text-[0.88rem]">{m.description}</div>
                         <div className="text-[0.72rem] text-[var(--color-muted)]">
-                          {formatCurrency(m.amount, m.currency)} · día {m.billing_day} de cada mes
+                          {formatCurrency(m.amount, m.currency)} · día {m.day_of_month} de cada mes
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-2 mt-3">
-                      {payments.map((p) => (
-                        <Pill key={p.id} tone={p.status === "cobrado" ? "fin" : "yellow"}>
-                          {p.period} · {p.status}
-                        </Pill>
-                      ))}
-                    </div>
+                    {mpayments.length > 0 && (
+                      <div className="flex gap-2 mt-3 flex-wrap">
+                        {mpayments.map((p) => (
+                          <Pill key={p.id} tone={p.status === "cobrado" ? "fin" : "yellow"}>
+                            {monthLabel(p.period_year, p.period_month)} · {p.status}
+                          </Pill>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -257,9 +329,17 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* 5. Archivos */}
         <Card>
-          <CardTitle badge={<Button variant="ghost">+ Link</Button>}>Archivos y links</CardTitle>
+          <CardTitle
+            badge={
+              <ProjectFileDialog
+                projectId={project.id}
+                trigger={<Button variant="ghost">+ Link</Button>}
+              />
+            }
+          >
+            Archivos y links
+          </CardTitle>
           {files.length === 0 ? (
             <div className="text-[0.8rem] text-[var(--color-muted)]">Sin archivos.</div>
           ) : (
@@ -285,15 +365,23 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
           )}
         </Card>
 
-        {/* 6. Decisiones */}
         <Card>
-          <CardTitle badge={<Button variant="ghost">+ Decisión</Button>}>Log de decisiones</CardTitle>
+          <CardTitle
+            badge={
+              <DecisionDialog
+                projectId={project.id}
+                trigger={<Button variant="ghost">+ Decisión</Button>}
+              />
+            }
+          >
+            Log de decisiones
+          </CardTitle>
           {projectDecisions.length === 0 ? (
             <div className="text-[0.8rem] text-[var(--color-muted)]">Sin decisiones registradas.</div>
           ) : (
             <div className="flex flex-col gap-3">
               {projectDecisions.map((d) => {
-                const u = getUser(d.decided_by);
+                const u = userById(d.decided_by);
                 return (
                   <div
                     key={d.id}
@@ -301,13 +389,15 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
                   >
                     <div className="flex items-center justify-between">
                       <div className="display font-semibold text-[0.85rem]">{d.title}</div>
-                      <Pill tone={u?.color ?? "muted"}>{u?.name}</Pill>
+                      {u && <Pill tone={u.color ?? "muted"}>{u.name}</Pill>}
                     </div>
-                    <div className="text-[0.75rem] text-[var(--color-muted)] mt-1">
-                      {d.description}
-                    </div>
+                    {d.description && (
+                      <div className="text-[0.75rem] text-[var(--color-muted)] mt-1">
+                        {d.description}
+                      </div>
+                    )}
                     <div className="mono text-[0.65rem] text-[var(--color-muted)] mt-1">
-                      {formatDate(d.created_at)}
+                      {formatDate(d.decided_at)}
                     </div>
                   </div>
                 );
@@ -316,62 +406,38 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
           )}
         </Card>
 
-        {/* 7. Comunicaciones */}
         <Card>
-          <CardTitle badge={<Button variant="ghost">+ Contacto</Button>}>Comunicaciones</CardTitle>
+          <CardTitle
+            badge={
+              <CommunicationDialog
+                projectId={project.id}
+                clientId={project.client_id}
+                trigger={<Button variant="ghost">+ Contacto</Button>}
+              />
+            }
+          >
+            Comunicaciones
+          </CardTitle>
           {comms.length === 0 ? (
             <div className="text-[0.8rem] text-[var(--color-muted)]">Sin comunicaciones.</div>
           ) : (
             <div className="flex flex-col gap-3">
               {comms.map((c) => {
-                const u = getUser(c.contacted_by);
+                const u = userById(c.contacted_by);
                 return (
                   <div
                     key={c.id}
                     className="py-2.5 px-3 rounded-[7px] border border-[var(--color-border-1)]"
                   >
                     <div className="flex items-center justify-between">
-                      <div className="display font-semibold text-[0.85rem]">{c.subject}</div>
+                      <div className="display font-semibold text-[0.85rem]">{c.subject ?? c.type}</div>
                       <Pill tone="cyan">{c.type}</Pill>
                     </div>
-                    <div className="text-[0.75rem] text-[var(--color-muted)] mt-1">{c.content}</div>
+                    {c.content && (
+                      <div className="text-[0.75rem] text-[var(--color-muted)] mt-1">{c.content}</div>
+                    )}
                     <div className="mono text-[0.65rem] text-[var(--color-muted)] mt-1">
-                      {u?.name} · {formatDate(c.created_at)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
-
-        {/* 8. Audit log del proyecto */}
-        <Card>
-          <CardTitle badge={<Pill tone="muted" mono>FIN 05</Pill>}>Audit log del proyecto</CardTitle>
-          {projectAudit.length === 0 ? (
-            <div className="text-[0.8rem] text-[var(--color-muted)]">Sin entradas.</div>
-          ) : (
-            <div className="flex flex-col gap-2.5">
-              {projectAudit.slice(0, 8).map((a) => {
-                const u = getUser(a.user_id);
-                return (
-                  <div key={a.id} className="flex items-start gap-2.5">
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-[0.65rem] shrink-0"
-                      style={{
-                        background:
-                          u?.color === "ops"
-                            ? "rgba(107,31,43,0.15)"
-                            : "rgba(196,122,62,0.15)",
-                      }}
-                    >
-                      {u?.avatar_emoji}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[0.78rem]">{a.description}</div>
-                      <div className="mono text-[0.62rem] text-[var(--color-muted)] mt-0.5">
-                        {formatDateTime(a.created_at)}
-                      </div>
+                      {u?.name ?? ""} · {formatDate(c.contacted_at)}
                     </div>
                   </div>
                 );

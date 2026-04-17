@@ -2,11 +2,24 @@ import { Card, SectionTitle } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Stat } from "@/components/ui/Stat";
 import { Button } from "@/components/ui/Button";
-import { expenses } from "@/lib/mock";
-import { getProject } from "@/lib/queries";
+import { ExpenseDialog } from "@/components/dialogs/ExpenseDialog";
+import { PayExpenseButton } from "@/components/actions/PayExpenseButton";
+import {
+  fetchAccounts,
+  fetchClients,
+  fetchExpenses,
+  fetchProjects,
+} from "@/lib/queries";
 import { formatCurrency, formatDate, daysUntil, relativeDays } from "@/lib/format";
 
-export default function InsumosPage() {
+export default async function InsumosPage() {
+  const [expenses, projects, clients, accounts] = await Promise.all([
+    fetchExpenses(),
+    fetchProjects(),
+    fetchClients(),
+    fetchAccounts(),
+  ]);
+
   const monthlyARS = expenses
     .filter((e) => e.frequency === "mensual" && e.currency === "ARS")
     .reduce((s, e) => s + e.cost, 0);
@@ -14,11 +27,17 @@ export default function InsumosPage() {
     .filter((e) => e.frequency === "mensual" && e.currency === "USD")
     .reduce((s, e) => s + e.cost, 0);
 
+  const getProject = (id: string) => projects.find((p) => p.id === id);
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-start justify-between">
         <SectionTitle kicker="Fin 03">Insumos / egresos</SectionTitle>
-        <Button tone="fin">+ Nuevo insumo</Button>
+        <ExpenseDialog
+          projects={projects}
+          clients={clients}
+          trigger={<Button tone="fin">+ Nuevo insumo</Button>}
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -48,14 +67,14 @@ export default function InsumosPage() {
           </thead>
           <tbody>
             {expenses.map((e) => {
-              const d = daysUntil(e.next_due_date);
+              const d = e.next_due_date ? daysUntil(e.next_due_date) : 9999;
               const tone = d <= 5 ? "red" : d <= 14 ? "yellow" : "muted";
               const proj = e.project_id ? getProject(e.project_id) : null;
               return (
                 <tr key={e.id} className="border-t border-[var(--color-border-1)]">
                   <td className="px-5 py-3 display font-semibold text-[0.85rem]">{e.name}</td>
                   <td className="px-5 py-3 text-[0.82rem] text-[var(--color-muted)]">
-                    {e.category}
+                    {e.category ?? "—"}
                   </td>
                   <td className="px-5 py-3 mono text-[0.82rem]">
                     {formatCurrency(e.cost, e.currency)}
@@ -64,10 +83,14 @@ export default function InsumosPage() {
                     <Pill tone="muted">{e.frequency}</Pill>
                   </td>
                   <td className="px-5 py-3">
-                    <div className="text-[0.8rem]">{formatDate(e.next_due_date)}</div>
-                    <div className="mono text-[0.62rem]" style={{ color: tone === "red" ? "#A6352C" : "#6b7fa0" }}>
-                      {relativeDays(d)}
+                    <div className="text-[0.8rem]">
+                      {e.next_due_date ? formatDate(e.next_due_date) : "—"}
                     </div>
+                    {e.next_due_date && (
+                      <div className="mono text-[0.62rem]" style={{ color: tone === "red" ? "#A6352C" : "#6b7fa0" }}>
+                        {relativeDays(d)}
+                      </div>
+                    )}
                   </td>
                   <td className="px-5 py-3 text-[0.8rem]">
                     {proj ? (
@@ -77,7 +100,7 @@ export default function InsumosPage() {
                     )}
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <Button variant="ghost">Marcar pagado</Button>
+                    <PayExpenseButton id={e.id} suggestedAmount={e.cost} accounts={accounts} />
                   </td>
                 </tr>
               );

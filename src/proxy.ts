@@ -1,6 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { isAllowedEmail } from "@/lib/auth";
 
 const PUBLIC_PATHS = ["/login", "/auth/callback", "/auth/signout"];
 
@@ -34,15 +33,6 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
-  const allowed = isAllowedEmail(user?.email);
-
-  if (user && !allowed) {
-    await supabase.auth.signOut();
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.search = "?error=not_allowed";
-    return NextResponse.redirect(url);
-  }
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
@@ -51,7 +41,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && allowed && pathname === "/login") {
+  if (user && pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";

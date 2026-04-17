@@ -1,23 +1,25 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Card, CardTitle, SectionTitle } from "@/components/ui/Card";
+import { Card, CardTitle } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
-import { getClient, projectsByClient } from "@/lib/queries";
+import { ClientDialog } from "@/components/dialogs/ClientDialog";
+import { ProjectDialog } from "@/components/dialogs/ProjectDialog";
+import { fetchClients, fetchUsers, getClient, projectsByClient } from "@/lib/queries";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { PHASES } from "@/lib/types";
 
 type Params = { id: string };
 
-export default async function ClienteDetail({
-  params,
-}: {
-  params: Promise<Params>;
-}) {
+export default async function ClienteDetail({ params }: { params: Promise<Params> }) {
   const { id } = await params;
-  const client = getClient(id);
+  const client = await getClient(id);
   if (!client) return notFound();
-  const projects = projectsByClient(id);
+  const [projects, clients, users] = await Promise.all([
+    projectsByClient(id),
+    fetchClients(),
+    fetchUsers(),
+  ]);
   const phaseLabel = (p: string) => PHASES.find((x) => x.key === p)?.label ?? p;
 
   return (
@@ -32,13 +34,18 @@ export default async function ClienteDetail({
             <Pill tone={client.is_active ? "fin" : "muted"}>
               {client.is_active ? "activo" : "inactivo"}
             </Pill>
-            <Pill tone="muted">{client.industry}</Pill>
+            {client.industry && <Pill tone="muted">{client.industry}</Pill>}
             <Pill tone="ops">{client.preferred_currency}</Pill>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="ghost">Editar</Button>
-          <Button tone="ops">+ Nuevo proyecto</Button>
+          <ClientDialog client={client} trigger={<Button variant="ghost">Editar</Button>} />
+          <ProjectDialog
+            clients={clients}
+            users={users}
+            defaultClientId={client.id}
+            trigger={<Button tone="ops">+ Nuevo proyecto</Button>}
+          />
         </div>
       </div>
 
@@ -46,20 +53,12 @@ export default async function ClienteDetail({
         <Card className="lg:col-span-1">
           <CardTitle>Datos</CardTitle>
           <div className="flex flex-col gap-3 text-[0.85rem]">
-            <Field label="Contacto" value={client.contact} />
-            <Field label="Teléfono" value={client.phone} />
-            <Field label="Email" value={client.email} />
+            <Field label="Contacto" value={client.contact ?? "—"} />
+            <Field label="Teléfono" value={client.phone ?? "—"} />
+            <Field label="Email" value={client.email ?? "—"} />
             <Field label="Moneda preferida" value={client.preferred_currency} />
             <Field label="Cliente desde" value={formatDate(client.created_at)} />
             {client.notes && <Field label="Notas" value={client.notes} />}
-          </div>
-          <div className="mt-5 pt-5 border-t border-[var(--color-border-1)]">
-            <Link
-              href={`/audit?entity=client:${client.id}`}
-              className="text-[0.75rem] text-[var(--color-muted)] hover:text-[var(--color-fin)]"
-            >
-              Ver audit log →
-            </Link>
           </div>
         </Card>
 

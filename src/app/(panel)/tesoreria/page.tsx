@@ -1,12 +1,11 @@
 import { Card, CardTitle, SectionTitle } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Stat } from "@/components/ui/Stat";
-import { treasuryByAccount, treasuryTotals } from "@/lib/queries";
+import { treasuryByAccount, treasuryTotals, type TreasuryAccount } from "@/lib/queries";
 import { formatCurrency } from "@/lib/format";
 
-export default function TesoreriaPage() {
-  const byAccount = treasuryByAccount();
-  const totals = treasuryTotals();
+export default async function TesoreriaPage() {
+  const [byAccount, totals] = await Promise.all([treasuryByAccount(), treasuryTotals()]);
 
   const ars = byAccount.filter((a) => a.currency === "ARS");
   const usd = byAccount.filter((a) => a.currency === "USD");
@@ -85,7 +84,7 @@ export default function TesoreriaPage() {
   );
 }
 
-function AccountCard({ a }: { a: ReturnType<typeof treasuryByAccount>[number] }) {
+function AccountCard({ a }: { a: TreasuryAccount }) {
   return (
     <Card>
       <CardTitle badge={<Pill tone="muted">{a.owner}</Pill>}>{a.name}</CardTitle>

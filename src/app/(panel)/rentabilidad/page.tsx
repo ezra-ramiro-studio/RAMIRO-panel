@@ -9,9 +9,13 @@ function marginTone(m: number): "fin" | "yellow" | "red" {
   return "red";
 }
 
-export default function RentabilidadPage() {
-  const byProject = profitabilityByProject().sort((a, b) => b.margin - a.margin);
-  const byClient = profitabilityByClient().sort((a, b) => b.margin - a.margin);
+export default async function RentabilidadPage() {
+  const [byProjectRaw, byClientRaw] = await Promise.all([
+    profitabilityByProject(),
+    profitabilityByClient(),
+  ]);
+  const byProject = byProjectRaw.sort((a, b) => b.margin - a.margin);
+  const byClient = byClientRaw.sort((a, b) => b.margin - a.margin);
 
   return (
     <div className="flex flex-col gap-8">

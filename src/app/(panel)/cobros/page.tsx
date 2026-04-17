@@ -4,8 +4,8 @@ import { Stat } from "@/components/ui/Stat";
 import { upcomingCollections } from "@/lib/queries";
 import { formatCurrency, formatDate, daysUntil, relativeDays } from "@/lib/format";
 
-export default function CobrosPage() {
-  const items = upcomingCollections(30);
+export default async function CobrosPage() {
+  const items = await upcomingCollections(30);
   const totalArs = items.filter((x) => x.currency === "ARS").reduce((s, x) => s + x.amount, 0);
   const totalUsd = items.filter((x) => x.currency === "USD").reduce((s, x) => s + x.amount, 0);
 

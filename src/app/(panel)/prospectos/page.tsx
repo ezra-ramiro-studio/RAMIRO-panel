@@ -2,22 +2,25 @@ import { Card, SectionTitle } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Stat } from "@/components/ui/Stat";
 import { Button } from "@/components/ui/Button";
-import { prospectsByStage, closeRate, getUser } from "@/lib/queries";
+import { ProspectDialog } from "@/components/dialogs/ProspectDialog";
+import { prospectsByStage, closeRate, fetchUsers } from "@/lib/queries";
 import { PROSPECT_STAGES } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/format";
 
-export default function ProspectosPage() {
-  const stages = prospectsByStage();
-  const rate = closeRate();
+export default async function ProspectosPage() {
+  const [stages, rate, users] = await Promise.all([
+    prospectsByStage(),
+    closeRate(),
+    fetchUsers(),
+  ]);
+
+  const getUser = (id: string | null | undefined) => (id ? users.find((u) => u.id === id) : null);
 
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-start justify-between">
         <SectionTitle kicker="Crec 01">Pipeline de prospectos</SectionTitle>
-        <div className="flex gap-2">
-          <Button variant="ghost">Vista lista</Button>
-          <Button tone="grow">+ Nuevo prospecto</Button>
-        </div>
+        <ProspectDialog users={users} trigger={<Button tone="grow">+ Nuevo prospecto</Button>} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -57,23 +60,23 @@ export default function ProspectosPage() {
                   </div>
                 ) : (
                   s.items.map((p) => {
-                    const u = getUser(p.responsible_id);
+                    const u = getUser(p.responsible_user_id);
                     return (
                       <div
                         key={p.id}
-                        className="rounded-[10px] border border-[var(--color-border-2)] bg-[var(--color-surface)] p-3 hover:bg-[var(--color-surface-2)] transition-colors cursor-pointer"
+                        className="rounded-[10px] border border-[var(--color-border-2)] bg-[var(--color-surface)] p-3 hover:bg-[var(--color-surface-2)] transition-colors"
                       >
                         <div className="display font-semibold text-[0.85rem]">{p.name}</div>
                         {p.company && (
                           <div className="text-[0.7rem] text-[var(--color-muted)]">{p.company}</div>
                         )}
                         <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                          <Pill tone="muted">{p.source.replace("_", " ")}</Pill>
+                          {p.origin && <Pill tone="muted">{p.origin}</Pill>}
                           {u && <Pill tone={u.color ?? "muted"}>{u.name}</Pill>}
                         </div>
-                        {p.estimated_amount && p.currency && (
+                        {p.estimated_amount && p.estimated_currency && (
                           <div className="mono text-[0.82rem] font-semibold mt-2" style={{ color: "#C47A3E" }}>
-                            {formatCurrency(p.estimated_amount, p.currency)}
+                            {formatCurrency(p.estimated_amount, p.estimated_currency)}
                           </div>
                         )}
                         {p.next_step && (

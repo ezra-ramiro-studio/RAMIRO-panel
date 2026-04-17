@@ -1,21 +1,35 @@
 import { Card, CardTitle, SectionTitle } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
-import { accounts, users } from "@/lib/mock";
-import { getUser } from "@/lib/queries";
+import { UserDialog } from "@/components/dialogs/UserDialog";
+import { AccountDialog } from "@/components/dialogs/AccountDialog";
+import { BusinessSettingsDialog } from "@/components/dialogs/BusinessSettingsDialog";
+import {
+  fetchAccounts,
+  fetchBusinessSettings,
+  fetchUsers,
+} from "@/lib/queries";
 
-export default function ConfiguracionPage() {
+export default async function ConfiguracionPage() {
+  const [users, accounts, business] = await Promise.all([
+    fetchUsers(),
+    fetchAccounts(),
+    fetchBusinessSettings(),
+  ]);
+
+  const getUser = (id: string | null | undefined) =>
+    id ? users.find((u) => u.id === id) : null;
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-start justify-between">
         <SectionTitle kicker="Crec 03 · Admin">Configuración</SectionTitle>
       </div>
 
-      {/* Usuarios */}
       <Card padding={false}>
         <div className="px-5 pt-5 pb-3 flex items-center justify-between">
           <CardTitle>Usuarios autorizados</CardTitle>
-          <Button tone="grow">+ Agregar usuario</Button>
+          <UserDialog trigger={<Button tone="grow">+ Agregar usuario</Button>} />
         </div>
         <table className="w-full">
           <thead>
@@ -39,7 +53,7 @@ export default function ConfiguracionPage() {
                           u.color === "ops" ? "rgba(107,31,43,0.15)" : "rgba(196,122,62,0.15)",
                       }}
                     >
-                      {u.avatar_emoji}
+                      {u.avatar_emoji ?? u.name[0]}
                     </div>
                     <span className="display font-semibold text-[0.88rem]">{u.name}</span>
                   </div>
@@ -52,7 +66,7 @@ export default function ConfiguracionPage() {
                   <Pill tone={u.is_active ? "fin" : "red"}>{u.is_active ? "activo" : "inactivo"}</Pill>
                 </td>
                 <td className="px-5 py-3 text-right">
-                  <Button variant="ghost">Editar</Button>
+                  <UserDialog user={u} trigger={<Button variant="ghost">Editar</Button>} />
                 </td>
               </tr>
             ))}
@@ -60,11 +74,10 @@ export default function ConfiguracionPage() {
         </table>
       </Card>
 
-      {/* Cuentas */}
       <Card padding={false}>
         <div className="px-5 pt-5 pb-3 flex items-center justify-between">
           <CardTitle>Cuentas de tesorería</CardTitle>
-          <Button tone="grow">+ Agregar cuenta</Button>
+          <AccountDialog users={users} trigger={<Button tone="grow">+ Agregar cuenta</Button>} />
         </div>
         <table className="w-full">
           <thead>
@@ -80,7 +93,7 @@ export default function ConfiguracionPage() {
             {accounts.map((a) => (
               <tr key={a.id} className="border-t border-[var(--color-border-1)]">
                 <td className="px-5 py-3 display font-semibold text-[0.85rem]">{a.name}</td>
-                <td className="px-5 py-3 text-[0.8rem]">{getUser(a.owner_id)?.name}</td>
+                <td className="px-5 py-3 text-[0.8rem]">{getUser(a.owner_user_id)?.name ?? "—"}</td>
                 <td className="px-5 py-3"><Pill tone="muted">{a.type.replace("_", " ")}</Pill></td>
                 <td className="px-5 py-3"><Pill tone="ops">{a.currency}</Pill></td>
                 <td className="px-5 py-3">
@@ -94,16 +107,22 @@ export default function ConfiguracionPage() {
         </table>
       </Card>
 
-      {/* Negocio */}
       <Card>
-        <CardTitle badge={<Button variant="ghost">Editar</Button>}>Datos del negocio</CardTitle>
+        <CardTitle
+          badge={
+            <BusinessSettingsDialog
+              settings={business}
+              trigger={<Button variant="ghost">Editar</Button>}
+            />
+          }
+        >
+          Datos del negocio
+        </CardTitle>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-[0.85rem]">
-          <Field label="Nombre comercial" value="M&E" />
-          <Field label="Razón social" value="Deerassetto-Marcos Sociedad Simple" />
-          <Field label="CUIT" value="30-71780000-1" />
-          <Field label="Dirección de facturación" value="Bariloche, Río Negro, Argentina" />
-          <Field label="Email" value="hola@me.dev" />
-          <Field label="Sitio" value="me.dev" />
+          <Field label="Nombre comercial" value={business?.name ?? "—"} />
+          <Field label="Razón social" value={business?.razon_social ?? "—"} />
+          <Field label="CUIT" value={business?.cuit ?? "—"} />
+          <Field label="Dirección de facturación" value={business?.billing_address ?? "—"} />
         </div>
       </Card>
     </div>

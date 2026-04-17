@@ -3,15 +3,16 @@ import { Card, CardTitle, SectionTitle } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Stat } from "@/components/ui/Stat";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { currentUser, auditLog } from "@/lib/mock";
 import {
+  fetchCurrentUser,
+  fetchProjects,
+  fetchUsers,
   todayTasks,
   upcomingCollections,
   monthlyMaintenances,
   treasuryTotals,
   expiringExpenses,
-  getProject,
-  getUser,
+  recentActivity,
 } from "@/lib/queries";
 import {
   formatCurrency,
@@ -22,15 +23,24 @@ import {
   relativeDays,
 } from "@/lib/format";
 
-export default function HomePage() {
-  const tasks = todayTasks();
-  const collections = upcomingCollections(7);
-  const monthly = monthlyMaintenances("2026-04");
-  const totals = treasuryTotals();
-  const recentActivity = [...auditLog]
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))
-    .slice(0, 5);
-  const expiring = expiringExpenses(14);
+export default async function HomePage() {
+  const me = await fetchCurrentUser();
+  if (!me) return null;
+
+  const [tasks, collections, monthly, totals, activity, expiring, projects, users] =
+    await Promise.all([
+      todayTasks(me.id),
+      upcomingCollections(7),
+      monthlyMaintenances(new Date().toISOString().slice(0, 7)),
+      treasuryTotals(),
+      recentActivity(5),
+      expiringExpenses(14),
+      fetchProjects(),
+      fetchUsers(),
+    ]);
+
+  const getProject = (id: string) => projects.find((p) => p.id === id);
+  const getUser = (id: string | null) => (id ? users.find((u) => u.id === id) : null);
 
   const priorityTone: Record<string, "red" | "gold" | "cyan" | "muted"> = {
     urgente: "red",
@@ -39,12 +49,14 @@ export default function HomePage() {
     baja: "muted",
   };
 
+  const todayLabel = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "long" }).format(new Date());
+
   return (
     <div className="flex flex-col gap-8">
       <div>
         <SectionTitle
-          kicker={`Op 01 · Hola ${currentUser.name}`}
-          italicTail="16 de abril"
+          kicker={`Op 01 · Hola ${me.name}`}
+          italicTail={todayLabel}
         >
           Hoy —
         </SectionTitle>
@@ -63,7 +75,7 @@ export default function HomePage() {
             <div className="flex flex-col divide-y divide-[var(--color-border-1)]">
               {tasks.map((t) => {
                 const proj = getProject(t.project_id);
-                const d = daysUntil(t.due_date);
+                const d = t.due_date ? daysUntil(t.due_date) : 0;
                 return (
                   <Link
                     key={t.id}
@@ -75,7 +87,7 @@ export default function HomePage() {
                         {t.title}
                       </div>
                       <div className="text-[0.72rem] text-[var(--color-muted)] truncate">
-                        {proj?.name} · {relativeDays(d)}
+                        {proj?.name} · {t.due_date ? relativeDays(d) : "sin fecha"}
                       </div>
                     </div>
                     <Pill tone={priorityTone[t.priority]}>{t.priority}</Pill>
@@ -115,7 +127,7 @@ export default function HomePage() {
         </Card>
 
         <Card>
-          <CardTitle>Mantenimientos de abril</CardTitle>
+          <CardTitle>Mantenimientos del mes</CardTitle>
           {monthly.length === 0 ? (
             <EmptyState title="Sin mantenimientos" />
           ) : (
@@ -168,32 +180,36 @@ export default function HomePage() {
 
         <Card>
           <CardTitle badge={<Pill tone="muted" mono>ÚLTIMAS 5</Pill>}>Actividad reciente</CardTitle>
-          <div className="flex flex-col gap-3">
-            {recentActivity.map((a) => {
-              const u = getUser(a.user_id);
-              return (
-                <div key={a.id} className="flex items-start gap-3">
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs shrink-0"
-                    style={{
-                      background:
-                        u?.color === "ops"
-                          ? "rgba(107,31,43,0.15)"
-                          : "rgba(196,122,62,0.15)",
-                    }}
-                  >
-                    {u?.avatar_emoji}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[0.8rem]">{a.description}</div>
-                    <div className="mono text-[0.66rem] text-[var(--color-muted)] mt-0.5">
-                      {formatDateTime(a.created_at)}
+          {activity.length === 0 ? (
+            <EmptyState title="Sin actividad reciente" />
+          ) : (
+            <div className="flex flex-col gap-3">
+              {activity.map((a) => {
+                const u = getUser(a.user_id);
+                return (
+                  <div key={a.id} className="flex items-start gap-3">
+                    <div
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-xs shrink-0"
+                      style={{
+                        background:
+                          u?.color === "ops"
+                            ? "rgba(107,31,43,0.15)"
+                            : "rgba(196,122,62,0.15)",
+                      }}
+                    >
+                      {u?.avatar_emoji ?? u?.name?.[0]}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[0.8rem]">{a.description ?? `${a.action} ${a.entity_type}`}</div>
+                      <div className="mono text-[0.66rem] text-[var(--color-muted)] mt-0.5">
+                        {formatDateTime(a.created_at)}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
 
         <Card>
