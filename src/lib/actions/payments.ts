@@ -21,6 +21,35 @@ export async function createPaymentAction(formData: FormData) {
   if (projectId) revalidatePath(`/proyectos/${projectId}`);
 }
 
+export async function updatePaymentAction(id: string, formData: FormData) {
+  const { supabase } = await getSessionUser();
+  const { data: prev } = await supabase
+    .from("payments")
+    .select("project_id")
+    .eq("id", id)
+    .single();
+  const projectId = fd<string>(formData, "project_id", prev?.project_id ?? "");
+  const { error } = await supabase
+    .from("payments")
+    .update({
+      project_id: projectId,
+      description: fd<string>(formData, "description"),
+      amount: fdNum(formData, "amount") ?? 0,
+      currency: fd<string>(formData, "currency", "ARS"),
+      due_date: fd<string | null>(formData, "due_date", null),
+      status: fd<string>(formData, "status", "pendiente"),
+      notes: fd<string | null>(formData, "notes", null),
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/cobros");
+  revalidatePath("/");
+  if (projectId) revalidatePath(`/proyectos/${projectId}`);
+  if (prev?.project_id && prev.project_id !== projectId) {
+    revalidatePath(`/proyectos/${prev.project_id}`);
+  }
+}
+
 export async function markPaymentPaidAction(id: string, formData: FormData) {
   const { supabase, dbUser } = await getSessionUser();
   const { data } = await supabase.from("payments").select("project_id").eq("id", id).single();

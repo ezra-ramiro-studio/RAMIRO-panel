@@ -5,25 +5,28 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { ErrorText, FormActions, FormGrid, FormRow, Input, Label, Select, Textarea } from "@/components/ui/Field";
-import { createProspectAction } from "@/lib/actions/prospects";
-import type { User } from "@/lib/types";
+import { createProspectAction, updateProspectAction } from "@/lib/actions/prospects";
+import type { Prospect, User } from "@/lib/types";
 
 interface Props {
   trigger: React.ReactNode;
   users: User[];
+  prospect?: Prospect;
 }
 
-export function ProspectDialog({ trigger, users }: Props) {
+export function ProspectDialog({ trigger, users, prospect }: Props) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const toast = useToast();
+  const editing = Boolean(prospect);
 
   async function onSubmit(formData: FormData) {
     setError(null);
     start(async () => {
       try {
-        await createProspectAction(formData);
+        if (prospect) await updateProspectAction(prospect.id, formData);
+        else await createProspectAction(formData);
         toast.success("Guardado");
         setOpen(false);
       } catch (e) {
@@ -37,26 +40,31 @@ export function ProspectDialog({ trigger, users }: Props) {
   return (
     <>
       <span onClick={() => setOpen(true)}>{trigger}</span>
-      <Dialog open={open} onClose={() => setOpen(false)} title="Nuevo prospecto">
+      <Dialog open={open} onClose={() => setOpen(false)} title={editing ? "Editar prospecto" : "Nuevo prospecto"}>
         <form action={onSubmit}>
           <FormGrid>
             <div>
               <Label htmlFor="name">Nombre</Label>
-              <Input id="name" name="name" required />
+              <Input id="name" name="name" required defaultValue={prospect?.name ?? ""} />
             </div>
             <div>
               <Label htmlFor="company">Empresa</Label>
-              <Input id="company" name="company" />
+              <Input id="company" name="company" defaultValue={prospect?.company ?? ""} />
             </div>
           </FormGrid>
           <FormGrid>
             <div>
               <Label htmlFor="origin">Origen</Label>
-              <Input id="origin" name="origin" placeholder="referido, sitio web…" />
+              <Input
+                id="origin"
+                name="origin"
+                placeholder="referido, sitio web…"
+                defaultValue={prospect?.origin ?? ""}
+              />
             </div>
             <div>
               <Label htmlFor="stage">Etapa</Label>
-              <Select id="stage" name="stage" defaultValue="contacto_inicial">
+              <Select id="stage" name="stage" defaultValue={prospect?.stage ?? "contacto_inicial"}>
                 <option value="contacto_inicial">Contacto inicial</option>
                 <option value="propuesta_enviada">Propuesta enviada</option>
                 <option value="negociacion">Negociación</option>
@@ -68,11 +76,21 @@ export function ProspectDialog({ trigger, users }: Props) {
           <FormGrid>
             <div>
               <Label htmlFor="estimated_amount">Monto estimado</Label>
-              <Input id="estimated_amount" name="estimated_amount" type="number" step="0.01" />
+              <Input
+                id="estimated_amount"
+                name="estimated_amount"
+                type="number"
+                step="0.01"
+                defaultValue={prospect?.estimated_amount ?? ""}
+              />
             </div>
             <div>
               <Label htmlFor="estimated_currency">Moneda</Label>
-              <Select id="estimated_currency" name="estimated_currency" defaultValue="ARS">
+              <Select
+                id="estimated_currency"
+                name="estimated_currency"
+                defaultValue={prospect?.estimated_currency ?? "ARS"}
+              >
                 <option value="ARS">ARS</option>
                 <option value="USD">USD</option>
               </Select>
@@ -80,7 +98,11 @@ export function ProspectDialog({ trigger, users }: Props) {
           </FormGrid>
           <FormRow>
             <Label htmlFor="responsible_user_id">Responsable</Label>
-            <Select id="responsible_user_id" name="responsible_user_id">
+            <Select
+              id="responsible_user_id"
+              name="responsible_user_id"
+              defaultValue={prospect?.responsible_user_id ?? ""}
+            >
               <option value="">—</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>{u.name}</option>
@@ -90,16 +112,21 @@ export function ProspectDialog({ trigger, users }: Props) {
           <FormGrid>
             <div>
               <Label htmlFor="next_step">Próximo paso</Label>
-              <Input id="next_step" name="next_step" />
+              <Input id="next_step" name="next_step" defaultValue={prospect?.next_step ?? ""} />
             </div>
             <div>
               <Label htmlFor="next_step_date">Fecha</Label>
-              <Input id="next_step_date" name="next_step_date" type="date" />
+              <Input
+                id="next_step_date"
+                name="next_step_date"
+                type="date"
+                defaultValue={prospect?.next_step_date ?? ""}
+              />
             </div>
           </FormGrid>
           <FormRow>
             <Label htmlFor="notes">Notas</Label>
-            <Textarea id="notes" name="notes" />
+            <Textarea id="notes" name="notes" defaultValue={prospect?.notes ?? ""} />
           </FormRow>
           {error && <ErrorText>{error}</ErrorText>}
           <FormActions>

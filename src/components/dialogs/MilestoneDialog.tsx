@@ -5,23 +5,27 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { ErrorText, FormActions, FormGrid, FormRow, Input, Label, Textarea } from "@/components/ui/Field";
-import { createMilestoneAction } from "@/lib/actions/milestones";
+import type { Milestone } from "@/lib/types";
+import { createMilestoneAction, updateMilestoneAction } from "@/lib/actions/milestones";
 
 interface Props {
   trigger: React.ReactNode;
+  milestone?: Milestone;
 }
 
-export function MilestoneDialog({ trigger }: Props) {
+export function MilestoneDialog({ trigger, milestone }: Props) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const toast = useToast();
+  const editing = Boolean(milestone);
 
   async function onSubmit(formData: FormData) {
     setError(null);
     start(async () => {
       try {
-        await createMilestoneAction(formData);
+        if (milestone) await updateMilestoneAction(milestone.id, formData);
+        else await createMilestoneAction(formData);
         toast.success("Guardado");
         setOpen(false);
       } catch (e) {
@@ -35,20 +39,25 @@ export function MilestoneDialog({ trigger }: Props) {
   return (
     <>
       <span onClick={() => setOpen(true)}>{trigger}</span>
-      <Dialog open={open} onClose={() => setOpen(false)} title="Nuevo logro">
+      <Dialog open={open} onClose={() => setOpen(false)} title={editing ? "Editar logro" : "Nuevo logro"}>
         <form action={onSubmit}>
           <FormRow>
             <Label htmlFor="title">Título</Label>
-            <Input id="title" name="title" required />
+            <Input id="title" name="title" required defaultValue={milestone?.title ?? ""} />
           </FormRow>
           <FormRow>
             <Label htmlFor="description">Descripción</Label>
-            <Textarea id="description" name="description" />
+            <Textarea id="description" name="description" defaultValue={milestone?.description ?? ""} />
           </FormRow>
           <FormGrid>
             <div>
               <Label htmlFor="milestone_date">Fecha</Label>
-              <Input id="milestone_date" name="milestone_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
+              <Input
+                id="milestone_date"
+                name="milestone_date"
+                type="date"
+                defaultValue={milestone?.milestone_date ?? new Date().toISOString().slice(0, 10)}
+              />
             </div>
             <div></div>
           </FormGrid>

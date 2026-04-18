@@ -21,6 +21,35 @@ export async function createTaskAction(formData: FormData) {
   if (projectId) revalidatePath(`/proyectos/${projectId}`);
 }
 
+export async function updateTaskAction(id: string, formData: FormData) {
+  const { supabase } = await getSessionUser();
+  const { data: prev } = await supabase
+    .from("tasks")
+    .select("project_id")
+    .eq("id", id)
+    .single();
+  const projectId = fd<string>(formData, "project_id", prev?.project_id ?? "");
+  const { error } = await supabase
+    .from("tasks")
+    .update({
+      project_id: projectId,
+      title: fd<string>(formData, "title"),
+      description: fd<string | null>(formData, "description", null),
+      assigned_to: fd<string | null>(formData, "assigned_to", null),
+      priority: fd<string>(formData, "priority", "media"),
+      status: fd<string>(formData, "status", "pendiente"),
+      due_date: fd<string | null>(formData, "due_date", null),
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/tareas");
+  revalidatePath("/");
+  if (projectId) revalidatePath(`/proyectos/${projectId}`);
+  if (prev?.project_id && prev.project_id !== projectId) {
+    revalidatePath(`/proyectos/${prev.project_id}`);
+  }
+}
+
 export async function toggleTaskAction(id: string) {
   const { supabase } = await getSessionUser();
   const { data } = await supabase.from("tasks").select("status,project_id").eq("id", id).single();

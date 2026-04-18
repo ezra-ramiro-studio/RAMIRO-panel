@@ -5,24 +5,28 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { ErrorText, FormActions, FormRow, Input, Label, Textarea } from "@/components/ui/Field";
-import { createDecisionAction } from "@/lib/actions/decisions";
+import type { Decision } from "@/lib/types";
+import { createDecisionAction, updateDecisionAction } from "@/lib/actions/decisions";
 
 interface Props {
   trigger: React.ReactNode;
   projectId: string;
+  decision?: Decision;
 }
 
-export function DecisionDialog({ trigger, projectId }: Props) {
+export function DecisionDialog({ trigger, projectId, decision }: Props) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const toast = useToast();
+  const editing = Boolean(decision);
 
   async function onSubmit(formData: FormData) {
     setError(null);
     start(async () => {
       try {
-        await createDecisionAction(formData);
+        if (decision) await updateDecisionAction(decision.id, formData);
+        else await createDecisionAction(formData);
         toast.success("Guardado");
         setOpen(false);
       } catch (e) {
@@ -36,20 +40,25 @@ export function DecisionDialog({ trigger, projectId }: Props) {
   return (
     <>
       <span onClick={() => setOpen(true)}>{trigger}</span>
-      <Dialog open={open} onClose={() => setOpen(false)} title="Nueva decisión">
+      <Dialog open={open} onClose={() => setOpen(false)} title={editing ? "Editar decisión" : "Nueva decisión"}>
         <form action={onSubmit}>
           <input type="hidden" name="project_id" value={projectId} />
           <FormRow>
             <Label htmlFor="title">Título</Label>
-            <Input id="title" name="title" required />
+            <Input id="title" name="title" required defaultValue={decision?.title ?? ""} />
           </FormRow>
           <FormRow>
             <Label htmlFor="description">Descripción</Label>
-            <Textarea id="description" name="description" />
+            <Textarea id="description" name="description" defaultValue={decision?.description ?? ""} />
           </FormRow>
           <FormRow>
             <Label htmlFor="decided_at">Fecha</Label>
-            <Input id="decided_at" name="decided_at" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
+            <Input
+              id="decided_at"
+              name="decided_at"
+              type="date"
+              defaultValue={decision?.decided_at ?? new Date().toISOString().slice(0, 10)}
+            />
           </FormRow>
           {error && <ErrorText>{error}</ErrorText>}
           <FormActions>

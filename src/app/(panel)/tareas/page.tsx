@@ -4,6 +4,8 @@ import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
 import { TaskDialog } from "@/components/dialogs/TaskDialog";
 import { TaskToggleButton } from "@/components/actions/TaskToggleButton";
+import { DeleteButton } from "@/components/actions/DeleteButton";
+import { deleteTaskAction } from "@/lib/actions/tasks";
 import {
   fetchCurrentUser,
   fetchProjects,
@@ -104,8 +106,25 @@ export default async function TareasPage() {
                         </div>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      <TaskToggleButton id={t.id} done={false} />
+                    <td className="px-5 py-3 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5">
+                        <TaskToggleButton id={t.id} done={false} />
+                        <TaskDialog
+                          projects={projects}
+                          users={users}
+                          task={t}
+                          trigger={<Button variant="ghost">Editar</Button>}
+                        />
+                        <DeleteButton
+                          onConfirm={async () => {
+                            "use server";
+                            await deleteTaskAction(t.id);
+                          }}
+                          title="Eliminar tarea"
+                          description={`Vas a eliminar “${t.title}”. Esta acción no se puede deshacer.`}
+                          trigger={<Button variant="ghost">Eliminar</Button>}
+                        />
+                      </div>
                     </td>
                   </tr>
                 );

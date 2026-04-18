@@ -13,6 +13,14 @@ import { ProjectDialog } from "@/components/dialogs/ProjectDialog";
 import { ChangePhaseDialog } from "@/components/actions/ChangePhaseDialog";
 import { TaskToggleButton } from "@/components/actions/TaskToggleButton";
 import { MarkPaymentPaidButton } from "@/components/actions/MarkPaymentPaidButton";
+import { DeleteButton } from "@/components/actions/DeleteButton";
+import { deleteProjectAction } from "@/lib/actions/projects";
+import { deleteTaskAction } from "@/lib/actions/tasks";
+import { deletePaymentAction } from "@/lib/actions/payments";
+import { deleteMaintenanceAction } from "@/lib/actions/maintenances";
+import { deleteProjectFileAction } from "@/lib/actions/project_files";
+import { deleteDecisionAction } from "@/lib/actions/decisions";
+import { deleteCommunicationAction } from "@/lib/actions/communications";
 import {
   fetchAccounts,
   fetchClients,
@@ -83,6 +91,8 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
       new Date(year, month - 1, 1),
     );
 
+  const projectId = project.id;
+
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -125,6 +135,16 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
               clients={clients}
               users={users}
               trigger={<Button variant="ghost">Editar</Button>}
+            />
+            <DeleteButton
+              onConfirm={async () => {
+                "use server";
+                await deleteProjectAction(projectId);
+              }}
+              title="Eliminar proyecto"
+              description={`Vas a eliminar “${project.name}” y todos sus datos asociados (tareas, pagos, archivos, decisiones, comunicaciones). Esta acción no se puede deshacer.`}
+              confirmLabel="Sí, eliminar"
+              trigger={<Button variant="ghost">Eliminar</Button>}
             />
           </div>
         </div>
@@ -217,8 +237,25 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
                     <td className="px-5 py-3 text-[0.8rem]">
                       {t.due_date ? formatDate(t.due_date) : "—"}
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      <TaskToggleButton id={t.id} done={t.status === "completada"} />
+                    <td className="px-5 py-3 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5">
+                        <TaskToggleButton id={t.id} done={t.status === "completada"} />
+                        <TaskDialog
+                          projects={projects}
+                          users={users}
+                          task={t}
+                          trigger={<Button variant="ghost">Editar</Button>}
+                        />
+                        <DeleteButton
+                          onConfirm={async () => {
+                            "use server";
+                            await deleteTaskAction(t.id);
+                          }}
+                          title="Eliminar tarea"
+                          description={`Vas a eliminar “${t.title}”.`}
+                          trigger={<Button variant="ghost">Eliminar</Button>}
+                        />
+                      </div>
                     </td>
                   </tr>
                 );
@@ -270,10 +307,26 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
                     <td className="px-5 py-3">
                       {u ? <Pill tone={u.color ?? "muted"}>{u.name}</Pill> : <span className="text-[var(--color-muted)] text-[0.75rem]">—</span>}
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      {p.status !== "cobrado" && (
-                        <MarkPaymentPaidButton id={p.id} accounts={accounts} />
-                      )}
+                    <td className="px-5 py-3 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5">
+                        {p.status !== "cobrado" && (
+                          <MarkPaymentPaidButton id={p.id} accounts={accounts} />
+                        )}
+                        <PaymentDialog
+                          projects={projects}
+                          payment={p}
+                          trigger={<Button variant="ghost">Editar</Button>}
+                        />
+                        <DeleteButton
+                          onConfirm={async () => {
+                            "use server";
+                            await deletePaymentAction(p.id);
+                          }}
+                          title="Eliminar cobro"
+                          description={`Vas a eliminar “${p.description}”.`}
+                          trigger={<Button variant="ghost">Eliminar</Button>}
+                        />
+                      </div>
                     </td>
                   </tr>
                 );
@@ -303,12 +356,29 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
                 const mpayments = allMaintPayments.filter((mp) => mp.maintenance_id === m.id);
                 return (
                   <div key={m.id} className="px-5 py-4 border-b border-[var(--color-border-1)] last:border-b-0">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-3">
                       <div>
                         <div className="display font-semibold text-[0.88rem]">{m.description}</div>
                         <div className="text-[0.72rem] text-[var(--color-muted)]">
                           {formatCurrency(m.amount, m.currency)} · día {m.day_of_month} de cada mes
                         </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <MaintenanceDialog
+                          clients={clients}
+                          projects={projects}
+                          maintenance={m}
+                          trigger={<Button variant="ghost">Editar</Button>}
+                        />
+                        <DeleteButton
+                          onConfirm={async () => {
+                            "use server";
+                            await deleteMaintenanceAction(m.id);
+                          }}
+                          title="Eliminar mantenimiento"
+                          description={`Vas a dar de baja el mantenimiento “${m.description}”.`}
+                          trigger={<Button variant="ghost">Eliminar</Button>}
+                        />
                       </div>
                     </div>
                     {mpayments.length > 0 && (
@@ -345,21 +415,39 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
           ) : (
             <div className="flex flex-col gap-2">
               {files.map((f) => (
-                <a
+                <div
                   key={f.id}
-                  href={f.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-between py-2 px-3 rounded-[7px] border border-[var(--color-border-1)] hover:border-[var(--color-ops-line)] transition-colors"
+                  className="flex items-center justify-between gap-3 py-2 px-3 rounded-[7px] border border-[var(--color-border-1)] hover:border-[var(--color-ops-line)] transition-colors"
                 >
-                  <div>
+                  <a
+                    href={f.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 min-w-0"
+                  >
                     <div className="display font-semibold text-[0.82rem]">{f.name}</div>
-                    <div className="text-[0.68rem] text-[var(--color-muted)] truncate max-w-[320px]">
+                    <div className="text-[0.68rem] text-[var(--color-muted)] truncate">
                       {f.url}
                     </div>
+                  </a>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Pill tone="ops">{f.type}</Pill>
+                    <ProjectFileDialog
+                      projectId={project.id}
+                      file={f}
+                      trigger={<Button variant="ghost">Editar</Button>}
+                    />
+                    <DeleteButton
+                      onConfirm={async () => {
+                        "use server";
+                        await deleteProjectFileAction(f.id, projectId);
+                      }}
+                      title="Eliminar link"
+                      description={`Vas a eliminar “${f.name}”.`}
+                      trigger={<Button variant="ghost">Eliminar</Button>}
+                    />
                   </div>
-                  <Pill tone="ops">{f.type}</Pill>
-                </a>
+                </div>
               ))}
             </div>
           )}
@@ -387,9 +475,25 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
                     key={d.id}
                     className="py-2.5 px-3 rounded-[7px] border border-[var(--color-border-1)]"
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="display font-semibold text-[0.85rem]">{d.title}</div>
-                      {u && <Pill tone={u.color ?? "muted"}>{u.name}</Pill>}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {u && <Pill tone={u.color ?? "muted"}>{u.name}</Pill>}
+                        <DecisionDialog
+                          projectId={project.id}
+                          decision={d}
+                          trigger={<Button variant="ghost">Editar</Button>}
+                        />
+                        <DeleteButton
+                          onConfirm={async () => {
+                            "use server";
+                            await deleteDecisionAction(d.id, projectId);
+                          }}
+                          title="Eliminar decisión"
+                          description={`Vas a eliminar “${d.title}”.`}
+                          trigger={<Button variant="ghost">Eliminar</Button>}
+                        />
+                      </div>
                     </div>
                     {d.description && (
                       <div className="text-[0.75rem] text-[var(--color-muted)] mt-1">
@@ -429,9 +533,26 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
                     key={c.id}
                     className="py-2.5 px-3 rounded-[7px] border border-[var(--color-border-1)]"
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="display font-semibold text-[0.85rem]">{c.subject ?? c.type}</div>
-                      <Pill tone="cyan">{c.type}</Pill>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Pill tone="cyan">{c.type}</Pill>
+                        <CommunicationDialog
+                          projectId={project.id}
+                          clientId={project.client_id}
+                          communication={c}
+                          trigger={<Button variant="ghost">Editar</Button>}
+                        />
+                        <DeleteButton
+                          onConfirm={async () => {
+                            "use server";
+                            await deleteCommunicationAction(c.id, projectId);
+                          }}
+                          title="Eliminar comunicación"
+                          description={`Vas a eliminar “${c.subject ?? c.type}”.`}
+                          trigger={<Button variant="ghost">Eliminar</Button>}
+                        />
+                      </div>
                     </div>
                     {c.content && (
                       <div className="text-[0.75rem] text-[var(--color-muted)] mt-1">{c.content}</div>

@@ -2,6 +2,8 @@ import { Card, SectionTitle } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
 import { MilestoneDialog } from "@/components/dialogs/MilestoneDialog";
+import { DeleteButton } from "@/components/actions/DeleteButton";
+import { deleteMilestoneAction } from "@/lib/actions/milestones";
 import { fetchMilestones, fetchUsers } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
 
@@ -72,6 +74,21 @@ export default async function LogrosPage() {
                           </div>
                         )}
                       </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 pt-3 mt-3 border-t border-[var(--color-border-1)]">
+                      <MilestoneDialog
+                        milestone={m}
+                        trigger={<Button variant="ghost">Editar</Button>}
+                      />
+                      <DeleteButton
+                        onConfirm={async () => {
+                          "use server";
+                          await deleteMilestoneAction(m.id);
+                        }}
+                        title="Eliminar logro"
+                        description={`Vas a eliminar “${m.title}”. Esta acción no se puede deshacer.`}
+                        trigger={<Button variant="ghost">Eliminar</Button>}
+                      />
                     </div>
                   </Card>
                 </div>

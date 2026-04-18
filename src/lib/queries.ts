@@ -556,6 +556,59 @@ export async function treasuryTotals(): Promise<{ ars: number; usd: number }> {
   };
 }
 
+export async function treasuryByAccountForPeriod(
+  from?: string,
+  to?: string,
+): Promise<TreasuryAccount[]> {
+  const supabase = await createClient();
+  const accounts = await fetchAccounts();
+  const users = await fetchUsers();
+
+  let paymentsQ = supabase
+    .from("payments")
+    .select("account_id,paid_amount,paid_at,currency,status");
+  if (from) paymentsQ = paymentsQ.gte("paid_at", from);
+  if (to) paymentsQ = paymentsQ.lte("paid_at", to);
+  const { data: payments } = await paymentsQ.eq("status", "cobrado");
+
+  let mainQ = supabase
+    .from("maintenance_payments")
+    .select("account_id,paid_amount,paid_at,currency,status");
+  if (from) mainQ = mainQ.gte("paid_at", from);
+  if (to) mainQ = mainQ.lte("paid_at", to);
+  const { data: mainPays } = await mainQ.eq("status", "cobrado");
+
+  let expQ = supabase
+    .from("expense_payments")
+    .select("account_id,amount,paid_at,currency");
+  if (from) expQ = expQ.gte("paid_at", from);
+  if (to) expQ = expQ.lte("paid_at", to);
+  const { data: expPays } = await expQ;
+
+  return accounts.map((acc) => {
+    const owner = users.find((u) => u.id === acc.owner_user_id);
+    const ip = (payments ?? [])
+      .filter((r) => (r.account_id as string | null) === acc.id)
+      .reduce((s, r) => s + Number(r.paid_amount ?? 0), 0);
+    const im = (mainPays ?? [])
+      .filter((r) => (r.account_id as string | null) === acc.id)
+      .reduce((s, r) => s + Number(r.paid_amount ?? 0), 0);
+    const out = (expPays ?? [])
+      .filter((r) => (r.account_id as string | null) === acc.id)
+      .reduce((s, r) => s + Number(r.amount ?? 0), 0);
+    return {
+      account_id: acc.id,
+      name: acc.name,
+      owner: owner?.name ?? "—",
+      currency: acc.currency,
+      income_projects: ip,
+      income_maintenances: im,
+      outflow: out,
+      balance: ip + im - out,
+    };
+  });
+}
+
 export async function monthlyMaintenances(period?: string) {
   const supabase = await createClient();
   let query = supabase.from("v_monthly_maintenances").select("*");

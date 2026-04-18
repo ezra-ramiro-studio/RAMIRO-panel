@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/Button";
 import { UserDialog } from "@/components/dialogs/UserDialog";
 import { AccountDialog } from "@/components/dialogs/AccountDialog";
 import { BusinessSettingsDialog } from "@/components/dialogs/BusinessSettingsDialog";
+import { DeleteButton } from "@/components/actions/DeleteButton";
+import { deleteAccountAction } from "@/lib/actions/accounts";
 import {
   fetchAccounts,
   fetchBusinessSettings,
@@ -87,6 +89,7 @@ export default async function ConfiguracionPage() {
               <Th>Tipo</Th>
               <Th>Moneda</Th>
               <Th>Estado</Th>
+              <th className="px-5 py-3" />
             </tr>
           </thead>
           <tbody>
@@ -100,6 +103,27 @@ export default async function ConfiguracionPage() {
                   <Pill tone={a.is_active ? "fin" : "muted"}>
                     {a.is_active ? "activa" : "inactiva"}
                   </Pill>
+                </td>
+                <td className="px-5 py-3 text-right whitespace-nowrap">
+                  <div className="inline-flex items-center gap-1.5">
+                    <AccountDialog
+                      users={users}
+                      account={a}
+                      trigger={<Button variant="ghost">Editar</Button>}
+                    />
+                    {a.is_active && (
+                      <DeleteButton
+                        onConfirm={async () => {
+                          "use server";
+                          await deleteAccountAction(a.id);
+                        }}
+                        title="Desactivar cuenta"
+                        description={`La cuenta “${a.name}” quedará inactiva. Las transacciones existentes se conservan.`}
+                        confirmLabel="Desactivar"
+                        trigger={<Button variant="ghost">Desactivar</Button>}
+                      />
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

@@ -2,6 +2,8 @@ import { Card, SectionTitle } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
 import { ServiceDialog } from "@/components/dialogs/ServiceDialog";
+import { DeleteButton } from "@/components/actions/DeleteButton";
+import { deleteServiceAction } from "@/lib/actions/services";
 import { fetchServices } from "@/lib/queries";
 import { formatCurrency } from "@/lib/format";
 
@@ -69,6 +71,21 @@ export default async function TarifarioPage() {
                     {s.price_usd ? formatCurrency(s.price_usd, "USD") : "—"}
                   </div>
                 </div>
+              </div>
+              <div className="flex items-center gap-1.5 pt-3 mt-3 border-t border-[var(--color-border-1)]">
+                <ServiceDialog
+                  service={s}
+                  trigger={<Button variant="ghost">Editar</Button>}
+                />
+                <DeleteButton
+                  onConfirm={async () => {
+                    "use server";
+                    await deleteServiceAction(s.id);
+                  }}
+                  title="Eliminar servicio"
+                  description={`Vas a eliminar “${s.name}” del tarifario.`}
+                  trigger={<Button variant="ghost">Eliminar</Button>}
+                />
               </div>
             </Card>
           ))}

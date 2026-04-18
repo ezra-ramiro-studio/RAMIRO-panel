@@ -5,27 +5,30 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { ErrorText, FormActions, FormGrid, FormRow, Input, Label, Select, Textarea } from "@/components/ui/Field";
-import type { Project, User } from "@/lib/types";
-import { createTaskAction } from "@/lib/actions/tasks";
+import type { Project, Task, User } from "@/lib/types";
+import { createTaskAction, updateTaskAction } from "@/lib/actions/tasks";
 
 interface Props {
   trigger: React.ReactNode;
   projects: Project[];
   users: User[];
   defaultProjectId?: string;
+  task?: Task;
 }
 
-export function TaskDialog({ trigger, projects, users, defaultProjectId }: Props) {
+export function TaskDialog({ trigger, projects, users, defaultProjectId, task }: Props) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const toast = useToast();
+  const editing = Boolean(task);
 
   async function onSubmit(formData: FormData) {
     setError(null);
     start(async () => {
       try {
-        await createTaskAction(formData);
+        if (task) await updateTaskAction(task.id, formData);
+        else await createTaskAction(formData);
         toast.success("Guardado");
         setOpen(false);
       } catch (e) {
@@ -39,15 +42,20 @@ export function TaskDialog({ trigger, projects, users, defaultProjectId }: Props
   return (
     <>
       <span onClick={() => setOpen(true)}>{trigger}</span>
-      <Dialog open={open} onClose={() => setOpen(false)} title="Nueva tarea">
+      <Dialog open={open} onClose={() => setOpen(false)} title={editing ? "Editar tarea" : "Nueva tarea"}>
         <form action={onSubmit}>
           <FormRow>
             <Label htmlFor="title">Título</Label>
-            <Input id="title" name="title" required />
+            <Input id="title" name="title" required defaultValue={task?.title ?? ""} />
           </FormRow>
           <FormRow>
             <Label htmlFor="project_id">Proyecto</Label>
-            <Select id="project_id" name="project_id" required defaultValue={defaultProjectId ?? ""}>
+            <Select
+              id="project_id"
+              name="project_id"
+              required
+              defaultValue={task?.project_id ?? defaultProjectId ?? ""}
+            >
               <option value="">— Elegí un proyecto —</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
@@ -56,12 +64,12 @@ export function TaskDialog({ trigger, projects, users, defaultProjectId }: Props
           </FormRow>
           <FormRow>
             <Label htmlFor="description">Descripción</Label>
-            <Textarea id="description" name="description" />
+            <Textarea id="description" name="description" defaultValue={task?.description ?? ""} />
           </FormRow>
           <FormGrid>
             <div>
               <Label htmlFor="assigned_to">Asignado a</Label>
-              <Select id="assigned_to" name="assigned_to">
+              <Select id="assigned_to" name="assigned_to" defaultValue={task?.assigned_to ?? ""}>
                 <option value="">—</option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>{u.name}</option>
@@ -70,7 +78,7 @@ export function TaskDialog({ trigger, projects, users, defaultProjectId }: Props
             </div>
             <div>
               <Label htmlFor="priority">Prioridad</Label>
-              <Select id="priority" name="priority" defaultValue="media">
+              <Select id="priority" name="priority" defaultValue={task?.priority ?? "media"}>
                 <option value="baja">Baja</option>
                 <option value="media">Media</option>
                 <option value="alta">Alta</option>
@@ -81,7 +89,7 @@ export function TaskDialog({ trigger, projects, users, defaultProjectId }: Props
           <FormGrid>
             <div>
               <Label htmlFor="status">Estado</Label>
-              <Select id="status" name="status" defaultValue="pendiente">
+              <Select id="status" name="status" defaultValue={task?.status ?? "pendiente"}>
                 <option value="pendiente">Pendiente</option>
                 <option value="en_progreso">En progreso</option>
                 <option value="completada">Completada</option>
@@ -89,7 +97,7 @@ export function TaskDialog({ trigger, projects, users, defaultProjectId }: Props
             </div>
             <div>
               <Label htmlFor="due_date">Vence</Label>
-              <Input id="due_date" name="due_date" type="date" />
+              <Input id="due_date" name="due_date" type="date" defaultValue={task?.due_date ?? ""} />
             </div>
           </FormGrid>
           {error && <ErrorText>{error}</ErrorText>}

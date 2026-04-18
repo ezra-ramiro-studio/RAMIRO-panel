@@ -3,6 +3,7 @@ import { Pill } from "@/components/ui/Pill";
 import { Stat } from "@/components/ui/Stat";
 import { Button } from "@/components/ui/Button";
 import { ProspectDialog } from "@/components/dialogs/ProspectDialog";
+import { ProspectActions } from "@/components/actions/ProspectActions";
 import { prospectsByStage, closeRate, fetchUsers } from "@/lib/queries";
 import { PROSPECT_STAGES } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -66,25 +67,34 @@ export default async function ProspectosPage() {
                         key={p.id}
                         className="rounded-[10px] border border-[var(--color-border-2)] bg-[var(--color-surface)] p-3 hover:bg-[var(--color-surface-2)] transition-colors"
                       >
-                        <div className="display font-semibold text-[0.85rem]">{p.name}</div>
-                        {p.company && (
-                          <div className="text-[0.7rem] text-[var(--color-muted)]">{p.company}</div>
-                        )}
-                        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                          {p.origin && <Pill tone="muted">{p.origin}</Pill>}
-                          {u && <Pill tone={u.color ?? "muted"}>{u.name}</Pill>}
-                        </div>
-                        {p.estimated_amount && p.estimated_currency && (
-                          <div className="mono text-[0.82rem] font-semibold mt-2" style={{ color: "#C47A3E" }}>
-                            {formatCurrency(p.estimated_amount, p.estimated_currency)}
-                          </div>
-                        )}
-                        {p.next_step && (
-                          <div className="text-[0.68rem] text-[var(--color-muted)] mt-1.5">
-                            {p.next_step}
-                            {p.next_step_date && ` · ${formatDate(p.next_step_date)}`}
-                          </div>
-                        )}
+                        <ProspectDialog
+                          users={users}
+                          prospect={p}
+                          trigger={
+                            <div className="cursor-pointer">
+                              <div className="display font-semibold text-[0.85rem]">{p.name}</div>
+                              {p.company && (
+                                <div className="text-[0.7rem] text-[var(--color-muted)]">{p.company}</div>
+                              )}
+                              <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                                {p.origin && <Pill tone="muted">{p.origin}</Pill>}
+                                {u && <Pill tone={u.color ?? "muted"}>{u.name}</Pill>}
+                              </div>
+                              {p.estimated_amount && p.estimated_currency && (
+                                <div className="mono text-[0.82rem] font-semibold mt-2" style={{ color: "#C47A3E" }}>
+                                  {formatCurrency(p.estimated_amount, p.estimated_currency)}
+                                </div>
+                              )}
+                              {p.next_step && (
+                                <div className="text-[0.68rem] text-[var(--color-muted)] mt-1.5">
+                                  {p.next_step}
+                                  {p.next_step_date && ` · ${formatDate(p.next_step_date)}`}
+                                </div>
+                              )}
+                            </div>
+                          }
+                        />
+                        <ProspectActions prospect={p} />
                       </div>
                     );
                   })

@@ -4,6 +4,8 @@ import { Stat } from "@/components/ui/Stat";
 import { Button } from "@/components/ui/Button";
 import { ExpenseDialog } from "@/components/dialogs/ExpenseDialog";
 import { PayExpenseButton } from "@/components/actions/PayExpenseButton";
+import { DeleteButton } from "@/components/actions/DeleteButton";
+import { deleteExpenseAction } from "@/lib/actions/expenses";
 import {
   fetchAccounts,
   fetchClients,
@@ -99,8 +101,25 @@ export default async function InsumosPage() {
                       <span className="text-[var(--color-muted)] text-[0.75rem]">Negocio</span>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-right">
-                    <PayExpenseButton id={e.id} suggestedAmount={e.cost} accounts={accounts} />
+                  <td className="px-5 py-3 text-right whitespace-nowrap">
+                    <div className="inline-flex items-center gap-1.5">
+                      <PayExpenseButton id={e.id} suggestedAmount={e.cost} accounts={accounts} />
+                      <ExpenseDialog
+                        projects={projects}
+                        clients={clients}
+                        expense={e}
+                        trigger={<Button variant="ghost">Editar</Button>}
+                      />
+                      <DeleteButton
+                        onConfirm={async () => {
+                          "use server";
+                          await deleteExpenseAction(e.id);
+                        }}
+                        title="Eliminar insumo"
+                        description={`Vas a eliminar “${e.name}”. Esta acción no se puede deshacer.`}
+                        trigger={<Button variant="ghost">Eliminar</Button>}
+                      />
+                    </div>
                   </td>
                 </tr>
               );

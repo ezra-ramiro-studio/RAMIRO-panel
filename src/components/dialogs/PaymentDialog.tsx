@@ -5,26 +5,29 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { ErrorText, FormActions, FormGrid, FormRow, Input, Label, Select, Textarea } from "@/components/ui/Field";
-import type { Project } from "@/lib/types";
-import { createPaymentAction } from "@/lib/actions/payments";
+import type { Payment, Project } from "@/lib/types";
+import { createPaymentAction, updatePaymentAction } from "@/lib/actions/payments";
 
 interface Props {
   trigger: React.ReactNode;
   projects: Project[];
   defaultProjectId?: string;
+  payment?: Payment;
 }
 
-export function PaymentDialog({ trigger, projects, defaultProjectId }: Props) {
+export function PaymentDialog({ trigger, projects, defaultProjectId, payment }: Props) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const toast = useToast();
+  const editing = Boolean(payment);
 
   async function onSubmit(formData: FormData) {
     setError(null);
     start(async () => {
       try {
-        await createPaymentAction(formData);
+        if (payment) await updatePaymentAction(payment.id, formData);
+        else await createPaymentAction(formData);
         toast.success("Guardado");
         setOpen(false);
       } catch (e) {
@@ -38,11 +41,16 @@ export function PaymentDialog({ trigger, projects, defaultProjectId }: Props) {
   return (
     <>
       <span onClick={() => setOpen(true)}>{trigger}</span>
-      <Dialog open={open} onClose={() => setOpen(false)} title="Nuevo cobro">
+      <Dialog open={open} onClose={() => setOpen(false)} title={editing ? "Editar cobro" : "Nuevo cobro"}>
         <form action={onSubmit}>
           <FormRow>
             <Label htmlFor="project_id">Proyecto</Label>
-            <Select id="project_id" name="project_id" required defaultValue={defaultProjectId ?? ""}>
+            <Select
+              id="project_id"
+              name="project_id"
+              required
+              defaultValue={payment?.project_id ?? defaultProjectId ?? ""}
+            >
               <option value="">— Elegí un proyecto —</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
@@ -51,16 +59,16 @@ export function PaymentDialog({ trigger, projects, defaultProjectId }: Props) {
           </FormRow>
           <FormRow>
             <Label htmlFor="description">Descripción</Label>
-            <Input id="description" name="description" required />
+            <Input id="description" name="description" required defaultValue={payment?.description ?? ""} />
           </FormRow>
           <FormGrid>
             <div>
               <Label htmlFor="amount">Monto</Label>
-              <Input id="amount" name="amount" type="number" step="0.01" required />
+              <Input id="amount" name="amount" type="number" step="0.01" required defaultValue={payment?.amount ?? ""} />
             </div>
             <div>
               <Label htmlFor="currency">Moneda</Label>
-              <Select id="currency" name="currency" defaultValue="ARS">
+              <Select id="currency" name="currency" defaultValue={payment?.currency ?? "ARS"}>
                 <option value="ARS">ARS</option>
                 <option value="USD">USD</option>
               </Select>
@@ -69,11 +77,11 @@ export function PaymentDialog({ trigger, projects, defaultProjectId }: Props) {
           <FormGrid>
             <div>
               <Label htmlFor="due_date">Vence</Label>
-              <Input id="due_date" name="due_date" type="date" />
+              <Input id="due_date" name="due_date" type="date" defaultValue={payment?.due_date ?? ""} />
             </div>
             <div>
               <Label htmlFor="status">Estado</Label>
-              <Select id="status" name="status" defaultValue="pendiente">
+              <Select id="status" name="status" defaultValue={payment?.status ?? "pendiente"}>
                 <option value="pendiente">Pendiente</option>
                 <option value="cobrado">Cobrado</option>
                 <option value="vencido">Vencido</option>
@@ -82,7 +90,7 @@ export function PaymentDialog({ trigger, projects, defaultProjectId }: Props) {
           </FormGrid>
           <FormRow>
             <Label htmlFor="notes">Notas</Label>
-            <Textarea id="notes" name="notes" />
+            <Textarea id="notes" name="notes" defaultValue={payment?.notes ?? ""} />
           </FormRow>
           {error && <ErrorText>{error}</ErrorText>}
           <FormActions>

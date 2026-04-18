@@ -20,6 +20,26 @@ export async function createExpenseAction(formData: FormData) {
   revalidatePath("/");
 }
 
+export async function updateExpenseAction(id: string, formData: FormData) {
+  const { supabase } = await getSessionUser();
+  const { error } = await supabase
+    .from("expenses")
+    .update({
+      name: fd<string>(formData, "name"),
+      category: fd<string | null>(formData, "category", null),
+      cost: fdNum(formData, "cost") ?? 0,
+      currency: fd<string>(formData, "currency", "USD"),
+      frequency: fd<string>(formData, "frequency", "mensual"),
+      next_due_date: fd<string | null>(formData, "next_due_date", null),
+      project_id: fd<string | null>(formData, "project_id", null),
+      client_id: fd<string | null>(formData, "client_id", null),
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/insumos");
+  revalidatePath("/");
+}
+
 export async function payExpenseAction(id: string, formData: FormData) {
   const { supabase, dbUser } = await getSessionUser();
   const { data: exp } = await supabase

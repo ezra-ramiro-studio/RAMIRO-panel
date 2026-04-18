@@ -5,25 +5,28 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { ErrorText, FormActions, FormGrid, FormRow, Input, Label, Select } from "@/components/ui/Field";
-import { createAccountAction } from "@/lib/actions/accounts";
-import type { User } from "@/lib/types";
+import { createAccountAction, updateAccountAction } from "@/lib/actions/accounts";
+import type { Account, User } from "@/lib/types";
 
 interface Props {
   trigger: React.ReactNode;
   users: User[];
+  account?: Account;
 }
 
-export function AccountDialog({ trigger, users }: Props) {
+export function AccountDialog({ trigger, users, account }: Props) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const toast = useToast();
+  const editing = Boolean(account);
 
   async function onSubmit(formData: FormData) {
     setError(null);
     start(async () => {
       try {
-        await createAccountAction(formData);
+        if (account) await updateAccountAction(account.id, formData);
+        else await createAccountAction(formData);
         toast.success("Guardado");
         setOpen(false);
       } catch (e) {
@@ -37,16 +40,16 @@ export function AccountDialog({ trigger, users }: Props) {
   return (
     <>
       <span onClick={() => setOpen(true)}>{trigger}</span>
-      <Dialog open={open} onClose={() => setOpen(false)} title="Nueva cuenta">
+      <Dialog open={open} onClose={() => setOpen(false)} title={editing ? "Editar cuenta" : "Nueva cuenta"}>
         <form action={onSubmit}>
           <FormRow>
             <Label htmlFor="name">Nombre</Label>
-            <Input id="name" name="name" required />
+            <Input id="name" name="name" required defaultValue={account?.name ?? ""} />
           </FormRow>
           <FormGrid>
             <div>
               <Label htmlFor="type">Tipo</Label>
-              <Select id="type" name="type" defaultValue="bank">
+              <Select id="type" name="type" defaultValue={account?.type ?? "bank"}>
                 <option value="bank">Banco</option>
                 <option value="digital_wallet">Billetera digital</option>
                 <option value="cash">Efectivo</option>
@@ -56,7 +59,7 @@ export function AccountDialog({ trigger, users }: Props) {
             </div>
             <div>
               <Label htmlFor="currency">Moneda</Label>
-              <Select id="currency" name="currency" defaultValue="ARS">
+              <Select id="currency" name="currency" defaultValue={account?.currency ?? "ARS"}>
                 <option value="ARS">ARS</option>
                 <option value="USD">USD</option>
               </Select>
@@ -64,7 +67,7 @@ export function AccountDialog({ trigger, users }: Props) {
           </FormGrid>
           <FormRow>
             <Label htmlFor="owner_user_id">Propietario</Label>
-            <Select id="owner_user_id" name="owner_user_id">
+            <Select id="owner_user_id" name="owner_user_id" defaultValue={account?.owner_user_id ?? ""}>
               <option value="">—</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>{u.name}</option>

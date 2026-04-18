@@ -5,6 +5,8 @@ import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
 import { ClientDialog } from "@/components/dialogs/ClientDialog";
 import { ProjectDialog } from "@/components/dialogs/ProjectDialog";
+import { DeleteButton } from "@/components/actions/DeleteButton";
+import { deleteClientAction } from "@/lib/actions/clients";
 import { fetchClients, fetchUsers, getClient, projectsByClient } from "@/lib/queries";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { PHASES } from "@/lib/types";
@@ -40,6 +42,19 @@ export default async function ClienteDetail({ params }: { params: Promise<Params
         </div>
         <div className="flex gap-2">
           <ClientDialog client={client} trigger={<Button variant="ghost">Editar</Button>} />
+          <DeleteButton
+            onConfirm={async () => {
+              "use server";
+              await deleteClientAction(client.id);
+            }}
+            title="Eliminar cliente"
+            description={
+              projects.length > 0
+                ? `Este cliente tiene ${projects.length} proyecto(s) asociados. Revisá antes de continuar. Esta acción es permanente.`
+                : `Vas a eliminar a “${client.name}”. Esta acción no se puede deshacer.`
+            }
+            trigger={<Button variant="ghost">Eliminar</Button>}
+          />
           <ProjectDialog
             clients={clients}
             users={users}
