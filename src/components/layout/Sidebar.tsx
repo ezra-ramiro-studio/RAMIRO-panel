@@ -14,7 +14,6 @@ const sections: Section[] = [
     color: "ops",
     title: "Operaciones",
     items: [
-      { href: "/", label: "Home — Hoy" },
       { href: "/clientes", label: "Clientes" },
       { href: "/proyectos", label: "Proyectos" },
       { href: "/tareas", label: "Mis tareas" },
@@ -93,6 +92,28 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 flex flex-col gap-2 px-3 py-5">
+        <Link
+          href="/"
+          className="block px-3 py-2 rounded-[6px] transition-colors mb-1"
+          style={{
+            background:
+              pathname === "/" ? "rgba(242,236,223,0.11)" : "transparent",
+          }}
+        >
+          <div
+            className="text-[15px]"
+            style={{
+              fontFamily: "var(--font-syne)",
+              fontWeight: 600,
+              letterSpacing: "0.04em",
+              color:
+                pathname === "/" ? "#F2ECDF" : "rgba(242,236,223,0.78)",
+            }}
+          >
+            Home — Hoy
+          </div>
+        </Link>
+
         {sections.map((section) => {
           const expanded = open[section.key];
           const sectionActive = section.items.some((item) =>
