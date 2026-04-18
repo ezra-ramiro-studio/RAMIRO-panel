@@ -28,8 +28,8 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Panel M&E",
-  description: "Panel de gestión interno — Marcos & Ezra",
+  title: "Panel RAMIRO",
+  description: "Panel de gestión interno — RAMIRO",
 };
 
 export default function RootLayout({
