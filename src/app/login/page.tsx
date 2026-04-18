@@ -2,7 +2,7 @@ import { GoogleSignInButton } from "./GoogleSignInButton";
 
 const ERROR_MESSAGES: Record<string, string> = {
   not_allowed:
-    "Ese correo no está autorizado. Entrá con la cuenta de Marcos o Ezra.",
+    "Ese correo no está autorizado. Entrá con una cuenta autorizada del estudio.",
   missing_code: "No pudimos completar el ingreso. Probá de nuevo.",
 };
 
@@ -41,7 +41,7 @@ export default async function LoginPage({
               className="inline-block w-6 h-[1px]"
               style={{ background: "var(--color-burgundy)" }}
             />
-            Marcos · Ezra
+            Estudio · Ramiro
             <span
               className="inline-block w-6 h-[1px]"
               style={{ background: "var(--color-burgundy)" }}
@@ -111,7 +111,7 @@ export default async function LoginPage({
               className="text-[12px]"
               style={{ color: "var(--color-muted)" }}
             >
-              Lista blanca activa · solo Marcos y Ezra.
+              Lista blanca activa · solo cuentas autorizadas.
             </div>
           </div>
         </div>

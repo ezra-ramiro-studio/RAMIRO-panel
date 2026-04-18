@@ -58,7 +58,7 @@ export function Sidebar() {
       >
         <Link href="/" className="block">
           <div className="display text-[1.4rem] leading-none tracking-[0.06em]">
-            PANEL · M&amp;E
+            PANEL · RAMIRO
           </div>
           <div
             className="serif text-[12px] mt-1"
