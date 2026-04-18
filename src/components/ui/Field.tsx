@@ -1,14 +1,13 @@
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, ReactNode } from "react";
 
 const inputBase =
-  "w-full bg-[var(--color-surface)] border border-[var(--color-border-2)] rounded-[6px] px-3 py-2 text-[13px] outline-none focus:border-[var(--color-burgundy)] placeholder:text-[var(--color-muted)]";
+  "w-full bg-surface border border-border-2 rounded-[6px] px-3 py-2 text-[13px] outline-none focus:border-burgundy placeholder:text-muted";
 
 export function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) {
   return (
     <label
       htmlFor={htmlFor}
-      className="mono text-[10px] uppercase tracking-[0.16em] block mb-1.5"
-      style={{ color: "var(--color-muted)" }}
+      className="mono text-[10px] uppercase tracking-[0.16em] block mb-1.5 text-muted"
     >
       {children}
     </label>
@@ -37,19 +36,14 @@ export function FormGrid({ children, cols = 2 }: { children: ReactNode; cols?: 1
 }
 
 export function FormActions({ children }: { children: ReactNode }) {
-  return <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-[var(--color-border-1)]">{children}</div>;
+  return <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-border-1">{children}</div>;
 }
 
 export function ErrorText({ children }: { children: ReactNode }) {
   if (!children) return null;
   return (
     <div
-      className="text-[12px] px-3 py-2 rounded-[6px] mt-3"
-      style={{
-        background: "rgba(166,53,44,0.08)",
-        color: "#A6352C",
-        border: "1px solid rgba(166,53,44,0.25)",
-      }}
+      className="text-[12px] px-3 py-2 rounded-[6px] mt-3 bg-[rgba(166,53,44,0.08)] text-[#A6352C] border border-[rgba(166,53,44,0.25)]"
     >
       {children}
     </div>
