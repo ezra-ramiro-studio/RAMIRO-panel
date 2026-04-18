@@ -1,18 +1,19 @@
-import Link from "next/link";
-import { Card, CardTitle, SectionTitle } from "@/components/ui/Card";
+import { Card, SectionTitle } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
-import { Stat } from "@/components/ui/Stat";
 import { Button } from "@/components/ui/Button";
 import { AccountDialog } from "@/components/dialogs/AccountDialog";
+import { AccountMovementsDialog } from "@/components/dialogs/AccountMovementsDialog";
 import { DeleteButton } from "@/components/actions/DeleteButton";
 import { deleteAccountAction } from "@/lib/actions/accounts";
 import {
+  fetchAccountMovements,
   fetchAccounts,
   fetchUsers,
   treasuryByAccount,
   treasuryByAccountForPeriod,
   treasuryTotals,
   type TreasuryAccount,
+  type AccountMovement,
 } from "@/lib/queries";
 import type { Account, User } from "@/lib/types";
 import { formatCurrency } from "@/lib/format";
@@ -58,13 +59,14 @@ export default async function TesoreriaPage({
     : "todo") as Period;
   const range = periodRange(period);
 
-  const [byAccount, totals, accounts, users] = await Promise.all([
+  const [byAccount, totals, accounts, users, movements] = await Promise.all([
     period === "todo"
       ? treasuryByAccount()
       : treasuryByAccountForPeriod(range.from, range.to),
     treasuryTotals(),
     fetchAccounts(),
     fetchUsers(),
+    fetchAccountMovements(),
   ]);
 
   const ars = byAccount.filter((a) => a.currency === "ARS");
@@ -148,7 +150,17 @@ export default async function TesoreriaPage({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {ars.map((a) => {
             const acc = accountById.get(a.account_id);
-            return <AccountCard key={a.account_id} a={a} acc={acc} users={users} period={period} />;
+            return (
+              <AccountCard
+                key={a.account_id}
+                a={a}
+                acc={acc}
+                users={users}
+                movements={movements}
+                pagePeriodLabel={range.label}
+                pagePeriodIsAll={period === "todo"}
+              />
+            );
           })}
         </div>
       </div>
@@ -161,7 +173,17 @@ export default async function TesoreriaPage({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {usd.map((a) => {
             const acc = accountById.get(a.account_id);
-            return <AccountCard key={a.account_id} a={a} acc={acc} users={users} period={period} />;
+            return (
+              <AccountCard
+                key={a.account_id}
+                a={a}
+                acc={acc}
+                users={users}
+                movements={movements}
+                pagePeriodLabel={range.label}
+                pagePeriodIsAll={period === "todo"}
+              />
+            );
           })}
         </div>
       </div>
@@ -173,68 +195,44 @@ function AccountCard({
   a,
   acc,
   users,
-  period,
+  movements,
+  pagePeriodLabel,
+  pagePeriodIsAll,
 }: {
   a: TreasuryAccount;
   acc: Account | undefined;
   users: User[];
-  period: Period;
+  movements: AccountMovement[];
+  pagePeriodLabel: string;
+  pagePeriodIsAll: boolean;
 }) {
-  return (
-    <Card>
-      <CardTitle badge={<Pill tone="muted">{a.owner}</Pill>}>{a.name}</CardTitle>
-      <Stat
-        label={period === "todo" ? `Balance ${a.currency}` : `Flujo neto ${a.currency}`}
-        tone="fin"
-        value={formatCurrency(a.balance, a.currency)}
+  const footer = acc ? (
+    <div className="flex items-center gap-1.5">
+      <AccountDialog
+        users={users}
+        account={acc}
+        trigger={<Button variant="ghost">Editar</Button>}
       />
-      <div className="mt-4 pt-4 border-t border-[var(--color-border-1)] grid grid-cols-2 gap-3 text-[0.75rem]">
-        <div>
-          <div className="mono text-[0.58rem] uppercase tracking-wider text-[var(--color-muted)]">
-            Proyectos
-          </div>
-          <div className="mono mt-0.5">{formatCurrency(a.income_projects, a.currency)}</div>
-        </div>
-        <div>
-          <div className="mono text-[0.58rem] uppercase tracking-wider text-[var(--color-muted)]">
-            Mantenimiento
-          </div>
-          <div className="mono mt-0.5">{formatCurrency(a.income_maintenances, a.currency)}</div>
-        </div>
-        <div>
-          <div className="mono text-[0.58rem] uppercase tracking-wider text-[var(--color-muted)]">
-            Egresos
-          </div>
-          <div className="mono mt-0.5" style={{ color: a.outflow > 0 ? "#A6352C" : undefined }}>
-            {formatCurrency(a.outflow, a.currency)}
-          </div>
-        </div>
-      </div>
-      {acc && (
-        <div className="flex items-center gap-1.5 pt-3 mt-3 border-t border-[var(--color-border-1)]">
-          <AccountDialog
-            users={users}
-            account={acc}
-            trigger={<Button variant="ghost">Editar</Button>}
-          />
-          <DeleteButton
-            onConfirm={async () => {
-              "use server";
-              await deleteAccountAction(acc.id);
-            }}
-            title="Desactivar cuenta"
-            description={`La cuenta “${acc.name}” quedará inactiva. Las transacciones existentes se conservan.`}
-            confirmLabel="Desactivar"
-            trigger={<Button variant="ghost">Desactivar</Button>}
-          />
-          <Link
-            href={`/configuracion`}
-            className="mono text-[0.6rem] uppercase tracking-wider text-[var(--color-muted)] hover:text-[var(--color-burgundy)] ml-auto"
-          >
-            detalle
-          </Link>
-        </div>
-      )}
-    </Card>
+      <DeleteButton
+        onConfirm={async () => {
+          "use server";
+          await deleteAccountAction(acc.id);
+        }}
+        title="Desactivar cuenta"
+        description={`La cuenta “${acc.name}” quedará inactiva. Las transacciones existentes se conservan.`}
+        confirmLabel="Desactivar"
+        trigger={<Button variant="ghost">Desactivar</Button>}
+      />
+    </div>
+  ) : undefined;
+
+  return (
+    <AccountMovementsDialog
+      a={a}
+      movements={movements}
+      pagePeriodLabel={pagePeriodLabel}
+      pagePeriodIsAll={pagePeriodIsAll}
+      footer={footer}
+    />
   );
 }

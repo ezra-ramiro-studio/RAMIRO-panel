@@ -599,6 +599,111 @@ export async function treasuryByAccount(): Promise<TreasuryAccount[]> {
   });
 }
 
+export interface AccountMovement {
+  id: string;
+  account_id: string;
+  date: string;
+  kind: "ingreso" | "egreso";
+  source: "proyecto" | "mantenimiento" | "insumo";
+  description: string;
+  counterpart: string;
+  amount: number;
+  currency: Currency;
+}
+
+export async function fetchAccountMovements(): Promise<AccountMovement[]> {
+  const supabase = await createClient();
+
+  const [paysRes, mainsRes, expsRes] = await Promise.all([
+    supabase
+      .from("payments")
+      .select("id, account_id, paid_at, amount, currency, description, projects(name, clients(name))")
+      .eq("status", "cobrado")
+      .not("account_id", "is", null)
+      .not("paid_at", "is", null),
+    supabase
+      .from("maintenance_payments")
+      .select("id, account_id, paid_at, amount, currency, maintenances(description, clients(name))")
+      .eq("status", "cobrado")
+      .not("account_id", "is", null)
+      .not("paid_at", "is", null),
+    supabase
+      .from("expense_payments")
+      .select("id, account_id, paid_at, amount, currency, expenses(name, category)")
+      .not("account_id", "is", null)
+      .not("paid_at", "is", null),
+  ]);
+
+  type PayRow = {
+    id: string;
+    account_id: string;
+    paid_at: string;
+    amount: number | string;
+    currency: Currency;
+    description: string | null;
+    projects: { name: string | null; clients: { name: string | null } | null } | null;
+  };
+  type MainRow = {
+    id: string;
+    account_id: string;
+    paid_at: string;
+    amount: number | string;
+    currency: Currency;
+    maintenances: {
+      description: string | null;
+      clients: { name: string | null } | null;
+    } | null;
+  };
+  type ExpRow = {
+    id: string;
+    account_id: string;
+    paid_at: string;
+    amount: number | string;
+    currency: Currency;
+    expenses: { name: string | null; category: string | null } | null;
+  };
+
+  const fromPays: AccountMovement[] = ((paysRes.data ?? []) as unknown as PayRow[]).map((r) => ({
+    id: `pay-${r.id}`,
+    account_id: r.account_id,
+    date: r.paid_at,
+    kind: "ingreso",
+    source: "proyecto",
+    description: r.description ?? "Cobro de proyecto",
+    counterpart: r.projects?.clients?.name ?? r.projects?.name ?? "—",
+    amount: Number(r.amount ?? 0),
+    currency: r.currency,
+  }));
+
+  const fromMains: AccountMovement[] = ((mainsRes.data ?? []) as unknown as MainRow[]).map((r) => ({
+    id: `main-${r.id}`,
+    account_id: r.account_id,
+    date: r.paid_at,
+    kind: "ingreso",
+    source: "mantenimiento",
+    description: r.maintenances?.description ?? "Mantenimiento",
+    counterpart: r.maintenances?.clients?.name ?? "—",
+    amount: Number(r.amount ?? 0),
+    currency: r.currency,
+  }));
+
+  const fromExps: AccountMovement[] = ((expsRes.data ?? []) as unknown as ExpRow[]).map((r) => ({
+    id: `exp-${r.id}`,
+    account_id: r.account_id,
+    date: r.paid_at,
+    kind: "egreso",
+    source: "insumo",
+    description: r.expenses?.name ?? "Insumo",
+    counterpart: r.expenses?.category ?? "Negocio",
+    amount: Number(r.amount ?? 0),
+    currency: r.currency,
+  }));
+
+  return [...fromPays, ...fromMains, ...fromExps].sort((a, b) =>
+    b.date.localeCompare(a.date),
+  );
+}
+
 export async function treasuryTotals(): Promise<{ ars: number; usd: number }> {
   const t = await treasuryByAccount();
   return {
