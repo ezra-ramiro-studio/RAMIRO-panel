@@ -12,6 +12,7 @@ export async function createPaymentAction(formData: FormData) {
     currency: fd<string>(formData, "currency", "ARS"),
     due_date: fd<string | null>(formData, "due_date", null),
     status: fd<string>(formData, "status", "pendiente"),
+    account_id: fd<string | null>(formData, "account_id", null),
     notes: fd<string | null>(formData, "notes", null),
   });
   if (error) throw new Error(error.message);
@@ -38,6 +39,7 @@ export async function updatePaymentAction(id: string, formData: FormData) {
       currency: fd<string>(formData, "currency", "ARS"),
       due_date: fd<string | null>(formData, "due_date", null),
       status: fd<string>(formData, "status", "pendiente"),
+      account_id: fd<string | null>(formData, "account_id", null),
       notes: fd<string | null>(formData, "notes", null),
     })
     .eq("id", id);

@@ -5,17 +5,18 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { ErrorText, FormActions, FormGrid, FormRow, Input, Label, Select, Textarea } from "@/components/ui/Field";
-import type { Payment, Project } from "@/lib/types";
+import type { Account, Payment, Project } from "@/lib/types";
 import { createPaymentAction, updatePaymentAction } from "@/lib/actions/payments";
 
 interface Props {
   trigger: React.ReactNode;
   projects: Project[];
+  accounts: Account[];
   defaultProjectId?: string;
   payment?: Payment;
 }
 
-export function PaymentDialog({ trigger, projects, defaultProjectId, payment }: Props) {
+export function PaymentDialog({ trigger, projects, accounts, defaultProjectId, payment }: Props) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -77,7 +78,7 @@ export function PaymentDialog({ trigger, projects, defaultProjectId, payment }: 
           <FormGrid>
             <div>
               <Label htmlFor="due_date">Vence</Label>
-              <Input id="due_date" name="due_date" type="date" defaultValue={payment?.due_date ?? ""} />
+              <Input id="due_date" name="due_date" type="date" required defaultValue={payment?.due_date ?? ""} />
             </div>
             <div>
               <Label htmlFor="status">Estado</Label>
@@ -88,6 +89,15 @@ export function PaymentDialog({ trigger, projects, defaultProjectId, payment }: 
               </Select>
             </div>
           </FormGrid>
+          <FormRow>
+            <Label htmlFor="account_id">Cuenta destino</Label>
+            <Select id="account_id" name="account_id" defaultValue={payment?.account_id ?? ""}>
+              <option value="">— Sin asignar —</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
+              ))}
+            </Select>
+          </FormRow>
           <FormRow>
             <Label htmlFor="notes">Notas</Label>
             <Textarea id="notes" name="notes" defaultValue={payment?.notes ?? ""} />

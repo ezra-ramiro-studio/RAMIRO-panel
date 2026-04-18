@@ -53,6 +53,7 @@ export default async function CobrosPage({
         <SectionTitle kicker="Fin 02">Agenda de cobros</SectionTitle>
         <PaymentDialog
           projects={projects}
+          accounts={accounts}
           trigger={<Button tone="fin">+ Nuevo cobro</Button>}
         />
       </div>
@@ -160,6 +161,7 @@ export default async function CobrosPage({
                           )}
                           <PaymentDialog
                             projects={projects}
+                            accounts={accounts}
                             payment={payment}
                             trigger={<Button variant="ghost">Editar</Button>}
                           />

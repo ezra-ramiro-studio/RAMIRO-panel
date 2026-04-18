@@ -270,6 +270,7 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
           <h3 className="display text-[0.95rem] font-semibold">Pagos</h3>
           <PaymentDialog
             projects={projects}
+            accounts={accounts}
             defaultProjectId={project.id}
             trigger={<Button tone="fin">+ Registrar hito</Button>}
           />
@@ -314,6 +315,7 @@ export default async function ProjectDetail({ params }: { params: Promise<Params
                         )}
                         <PaymentDialog
                           projects={projects}
+                          accounts={accounts}
                           payment={p}
                           trigger={<Button variant="ghost">Editar</Button>}
                         />
