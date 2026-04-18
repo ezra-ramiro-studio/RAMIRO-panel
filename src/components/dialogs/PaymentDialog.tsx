@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import { ErrorText, FormActions, FormGrid, FormRow, Input, Label, Select, Textarea } from "@/components/ui/Field";
 import type { Project } from "@/lib/types";
 import { createPaymentAction } from "@/lib/actions/payments";
@@ -17,15 +18,19 @@ export function PaymentDialog({ trigger, projects, defaultProjectId }: Props) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const toast = useToast();
 
   async function onSubmit(formData: FormData) {
     setError(null);
     start(async () => {
       try {
         await createPaymentAction(formData);
+        toast.success("Guardado");
         setOpen(false);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Error al guardar");
+        const msg = e instanceof Error ? e.message : "Error al guardar";
+        setError(msg);
+        toast.error(msg);
       }
     });
   }
@@ -82,7 +87,7 @@ export function PaymentDialog({ trigger, projects, defaultProjectId }: Props) {
           {error && <ErrorText>{error}</ErrorText>}
           <FormActions>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button type="submit" tone="primary" disabled={pending}>{pending ? "Guardando…" : "Guardar"}</Button>
+            <Button type="submit" tone="primary" pending={pending}>{pending ? "Guardando…" : "Guardar"}</Button>
           </FormActions>
         </form>
       </Dialog>

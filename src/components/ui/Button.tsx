@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { Spinner } from "./Spinner";
 
 type Tone = "ops" | "fin" | "grow" | "neutral" | "primary" | "ghost" | "danger";
 
@@ -34,18 +35,21 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   tone?: Tone;
   variant?: "solid" | "ghost";
   icon?: ReactNode;
+  pending?: boolean;
 }
 
 export function Button({
   tone = "neutral",
   variant = "solid",
   icon,
+  pending = false,
+  disabled,
   children,
   className = "",
   ...rest
 }: Props) {
   const base =
-    "inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[6px] text-[11px] font-semibold uppercase tracking-[0.14em] transition-all whitespace-nowrap mono";
+    "inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[6px] text-[11px] font-semibold uppercase tracking-[0.14em] transition-all whitespace-nowrap mono disabled:cursor-not-allowed disabled:opacity-70";
   const style =
     variant === "ghost"
       ? {
@@ -58,13 +62,15 @@ export function Button({
           borderColor: toneBorder[tone],
           color: toneColor[tone],
         };
+  const spinnerColor = variant === "ghost" ? "#7A6466" : toneColor[tone];
   return (
     <button
       className={`${base} border hover:brightness-[0.97] active:brightness-[0.92] ${className}`}
       style={style}
+      disabled={disabled || pending}
       {...rest}
     >
-      {icon}
+      {pending ? <Spinner size="sm" color={spinnerColor} /> : icon}
       {children}
     </button>
   );

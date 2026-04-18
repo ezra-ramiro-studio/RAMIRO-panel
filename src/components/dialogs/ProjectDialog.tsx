@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import { ErrorText, FormActions, FormGrid, FormRow, Input, Label, Select, Textarea } from "@/components/ui/Field";
 import type { Client, Project, User } from "@/lib/types";
 import { createProjectAction, updateProjectAction } from "@/lib/actions/projects";
@@ -19,6 +20,7 @@ export function ProjectDialog({ trigger, clients, users, project, defaultClientI
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const toast = useToast();
   const editing = Boolean(project);
 
   async function onSubmit(formData: FormData) {
@@ -27,9 +29,12 @@ export function ProjectDialog({ trigger, clients, users, project, defaultClientI
       try {
         if (project) await updateProjectAction(project.id, formData);
         else await createProjectAction(formData);
+        toast.success("Guardado");
         setOpen(false);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Error al guardar");
+        const msg = e instanceof Error ? e.message : "Error al guardar";
+        setError(msg);
+        toast.error(msg);
       }
     });
   }
@@ -119,7 +124,7 @@ export function ProjectDialog({ trigger, clients, users, project, defaultClientI
           {error && <ErrorText>{error}</ErrorText>}
           <FormActions>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button type="submit" tone="primary" disabled={pending}>{pending ? "Guardando…" : "Guardar"}</Button>
+            <Button type="submit" tone="primary" pending={pending}>{pending ? "Guardando…" : "Guardar"}</Button>
           </FormActions>
         </form>
       </Dialog>

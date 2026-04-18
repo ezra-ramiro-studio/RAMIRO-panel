@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Bebas_Neue, Syne, DM_Sans, Fraunces } from "next/font/google";
+import { ToastProvider } from "@/components/ui/Toast";
+import { RouteProgress } from "@/components/ui/RouteProgress";
 import "./globals.css";
 
 const bebas = Bebas_Neue({
@@ -42,7 +44,12 @@ export default function RootLayout({
       lang="es"
       className={`${bebas.variable} ${syne.variable} ${dmSans.variable} ${fraunces.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <ToastProvider>
+          <RouteProgress />
+          {children}
+        </ToastProvider>
+      </body>
     </html>
   );
 }
