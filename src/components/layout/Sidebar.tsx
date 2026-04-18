@@ -2,46 +2,68 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import type { ModuleColor } from "@/lib/types";
 
-type Item = { href: string; code: string; label: string };
-type Section = { color: ModuleColor; title: string; items: Item[] };
+type Item = { href: string; label: string };
+type Section = { key: string; color: ModuleColor; title: string; items: Item[] };
 
 const sections: Section[] = [
   {
+    key: "ops",
     color: "ops",
     title: "Operaciones",
     items: [
-      { href: "/", code: "Op 01", label: "Home — Hoy" },
-      { href: "/clientes", code: "Op 02", label: "Clientes" },
-      { href: "/tareas", code: "Op 05", label: "Mis tareas" },
+      { href: "/", label: "Home — Hoy" },
+      { href: "/clientes", label: "Clientes" },
+      { href: "/tareas", label: "Mis tareas" },
     ],
   },
   {
+    key: "fin",
     color: "fin",
     title: "Finanzas",
     items: [
-      { href: "/tesoreria", code: "Fin 01", label: "Tesorería" },
-      { href: "/cobros", code: "Fin 02", label: "Agenda de cobros" },
-      { href: "/insumos", code: "Fin 03", label: "Insumos" },
-      { href: "/rentabilidad", code: "Fin 04", label: "Rentabilidad" },
-      { href: "/audit", code: "Fin 05", label: "Audit log" },
+      { href: "/tesoreria", label: "Tesorería" },
+      { href: "/cobros", label: "Agenda de cobros" },
+      { href: "/insumos", label: "Insumos" },
+      { href: "/rentabilidad", label: "Rentabilidad" },
+      { href: "/audit", label: "Audit log" },
     ],
   },
   {
+    key: "grow",
     color: "grow",
     title: "Crecimiento",
     items: [
-      { href: "/prospectos", code: "Crec 01", label: "Prospectos" },
-      { href: "/tarifario", code: "Crec 02", label: "Tarifario" },
-      { href: "/configuracion", code: "Crec 03", label: "Configuración" },
-      { href: "/logros", code: "Crec 04", label: "Muro de logros" },
+      { href: "/prospectos", label: "Prospectos" },
+      { href: "/tarifario", label: "Tarifario" },
+      { href: "/configuracion", label: "Configuración" },
+      { href: "/logros", label: "Muro de logros" },
     ],
   },
 ];
 
+function isItemActive(pathname: string, href: string) {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(href + "/");
+}
+
 export function Sidebar() {
   const pathname = usePathname();
+
+  const [open, setOpen] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const section of sections) {
+      initial[section.key] = section.items.some((item) =>
+        isItemActive(pathname, item.href),
+      );
+    }
+    return initial;
+  });
+
+  const toggle = (key: string) =>
+    setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
 
   return (
     <aside
@@ -69,59 +91,98 @@ export function Sidebar() {
         </Link>
       </div>
 
-      <nav className="flex-1 flex flex-col gap-6 px-3 py-5">
-        {sections.map((section) => (
-          <div key={section.title}>
-            <div
-              className="mono text-[9px] uppercase tracking-[0.2em] px-3 mb-2"
-              style={{ color: "rgba(242,236,223,0.5)" }}
-            >
-              {section.title}
+      <nav className="flex-1 flex flex-col gap-2 px-3 py-5">
+        {sections.map((section) => {
+          const expanded = open[section.key];
+          const sectionActive = section.items.some((item) =>
+            isItemActive(pathname, item.href),
+          );
+          return (
+            <div key={section.key}>
+              <button
+                type="button"
+                onClick={() => toggle(section.key)}
+                aria-expanded={expanded}
+                aria-controls={`section-${section.key}`}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-[6px] transition-colors"
+                style={{
+                  background: "transparent",
+                  color:
+                    sectionActive || expanded
+                      ? "#F2ECDF"
+                      : "rgba(242,236,223,0.78)",
+                }}
+              >
+                <span
+                  className="text-[15px]"
+                  style={{
+                    fontFamily: "var(--font-syne)",
+                    fontWeight: 600,
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {section.title}
+                </span>
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 10 10"
+                  fill="none"
+                  style={{
+                    transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+                    transition: "transform 180ms ease",
+                    opacity: 0.6,
+                  }}
+                >
+                  <path
+                    d="M3 1.5L6.5 5L3 8.5"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+
+              {expanded && (
+                <div
+                  id={`section-${section.key}`}
+                  className="flex flex-col gap-0.5 mt-1 mb-2"
+                >
+                  {section.items.map((item) => {
+                    const active = isItemActive(pathname, item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="group block px-3 py-2 rounded-[6px] transition-colors"
+                        style={{
+                          background: active
+                            ? "rgba(242,236,223,0.11)"
+                            : "transparent",
+                        }}
+                      >
+                        <div
+                          className="text-[13px]"
+                          style={{
+                            fontFamily: "var(--font-syne)",
+                            fontWeight: 500,
+                            letterSpacing: "0.02em",
+                            color: active
+                              ? "#F2ECDF"
+                              : "rgba(242,236,223,0.7)",
+                          }}
+                        >
+                          {item.label}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-            <div className="flex flex-col gap-0.5">
-              {section.items.map((item) => {
-                const active =
-                  item.href === "/"
-                    ? pathname === "/"
-                    : pathname === item.href || pathname.startsWith(item.href + "/");
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="group block px-3 py-2 rounded-[6px] transition-colors"
-                    style={{
-                      background: active
-                        ? "rgba(242,236,223,0.11)"
-                        : "transparent",
-                    }}
-                  >
-                    <div
-                      className="mono text-[9px] uppercase tracking-[0.16em]"
-                      style={{
-                        color: active
-                          ? "#F2ECDF"
-                          : "rgba(242,236,223,0.45)",
-                      }}
-                    >
-                      {item.code}
-                    </div>
-                    <div
-                      className="text-[13px] mt-0.5"
-                      style={{
-                        fontFamily: "var(--font-syne)",
-                        fontWeight: 600,
-                        letterSpacing: "0.02em",
-                        color: active ? "#F2ECDF" : "rgba(242,236,223,0.82)",
-                      }}
-                    >
-                      {item.label}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
 
       <div
