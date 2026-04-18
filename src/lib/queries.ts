@@ -493,27 +493,78 @@ export interface UpcomingCollection {
 
 export async function upcomingCollections(days: number = 30): Promise<UpcomingCollection[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("v_upcoming_collections").select("*").order("due_date").limit(200);
-  const rows = (data ?? []) as Record<string, unknown>[];
-  return rows
-    .filter((r) => {
-      const d = daysUntil(r.due_date as string);
-      return d >= -30 && d <= days;
+
+  const { data: payRows } = await supabase
+    .from("payments")
+    .select("id, description, amount, currency, due_date, status, projects(name, clients(name))")
+    .not("due_date", "is", null)
+    .order("due_date");
+
+  const { data: mainRows } = await supabase
+    .from("maintenance_payments")
+    .select("id, amount, currency, due_date, status, maintenances(description, projects(name), clients(name))")
+    .not("due_date", "is", null)
+    .order("due_date");
+
+  type JoinedPayment = {
+    id: string;
+    description: string | null;
+    amount: number | string;
+    currency: Currency;
+    due_date: string;
+    status: PaymentStatus;
+    projects: { name: string | null; clients: { name: string | null } | null } | null;
+  };
+
+  type JoinedMaintPayment = {
+    id: string;
+    amount: number | string;
+    currency: Currency;
+    due_date: string;
+    status: PaymentStatus;
+    maintenances: {
+      description: string | null;
+      projects: { name: string | null } | null;
+      clients: { name: string | null } | null;
+    } | null;
+  };
+
+  const fromPayments: UpcomingCollection[] = ((payRows ?? []) as unknown as JoinedPayment[]).map((r) => ({
+    id: r.id,
+    date: r.due_date,
+    client: r.projects?.clients?.name ?? "—",
+    project: r.projects?.name ?? "—",
+    description: r.description ?? "",
+    amount: Number(r.amount ?? 0),
+    currency: r.currency ?? "ARS",
+    type: "proyecto",
+    status:
+      daysUntil(r.due_date) < 0 && r.status !== "cobrado"
+        ? "vencido"
+        : r.status,
+  }));
+
+  const fromMaint: UpcomingCollection[] = ((mainRows ?? []) as unknown as JoinedMaintPayment[]).map((r) => ({
+    id: r.id,
+    date: r.due_date,
+    client: r.maintenances?.clients?.name ?? "—",
+    project: r.maintenances?.projects?.name ?? "—",
+    description: r.maintenances?.description ?? "",
+    amount: Number(r.amount ?? 0),
+    currency: r.currency ?? "ARS",
+    type: "mantenimiento",
+    status:
+      daysUntil(r.due_date) < 0 && r.status !== "cobrado"
+        ? "vencido"
+        : r.status,
+  }));
+
+  return [...fromPayments, ...fromMaint]
+    .filter((x) => {
+      const d = daysUntil(x.date);
+      return d >= -days && d <= days;
     })
-    .map((r) => ({
-      id: r.id as string,
-      date: r.due_date as string,
-      client: (r.client_name as string) ?? "—",
-      project: (r.project_name as string) ?? "—",
-      description: (r.description as string) ?? "",
-      amount: Number(r.amount ?? 0),
-      currency: (r.currency as Currency) ?? "ARS",
-      type: ((r.source_type as string) === "maintenance" ? "mantenimiento" : "proyecto") as "proyecto" | "mantenimiento",
-      status:
-        daysUntil(r.due_date as string) < 0 && r.status !== "cobrado"
-          ? "vencido"
-          : (r.status as PaymentStatus),
-    }));
+    .sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export interface TreasuryAccount {

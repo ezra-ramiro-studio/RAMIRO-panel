@@ -78,6 +78,7 @@ export default async function CobrosPage({
           <option value="todos">Todos</option>
           <option value="pendiente">Pendiente</option>
           <option value="vencido">Vencido</option>
+          <option value="cobrado">Cobrado</option>
         </FilterSelect>
         <Button type="submit" variant="ghost">Aplicar</Button>
         {(type !== "todos" || status !== "todos" || daysParam !== "30") && (
