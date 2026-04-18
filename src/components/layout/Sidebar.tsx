@@ -16,6 +16,7 @@ const sections: Section[] = [
     items: [
       { href: "/", label: "Home — Hoy" },
       { href: "/clientes", label: "Clientes" },
+      { href: "/proyectos", label: "Proyectos" },
       { href: "/tareas", label: "Mis tareas" },
     ],
   },
