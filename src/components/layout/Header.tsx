@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { fetchCurrentUser } from "@/lib/queries";
 
 function Dot({ color }: { color: string }) {
@@ -52,16 +51,18 @@ export async function Header() {
             {user.avatar_emoji ?? user.name[0]}
           </div>
         )}
-        <Link
-          href="/auth/signout"
-          className="mono text-[10px] uppercase tracking-[0.14em] px-3 py-2 rounded-[6px] border hover:bg-[var(--color-surface)] transition-colors"
-          style={{
-            borderColor: "var(--color-border-2)",
-            color: "var(--color-muted)",
-          }}
-        >
-          Salir
-        </Link>
+        <form action="/auth/signout" method="post">
+          <button
+            type="submit"
+            className="mono text-[10px] uppercase tracking-[0.14em] px-3 py-2 rounded-[6px] border hover:bg-[var(--color-surface)] transition-colors"
+            style={{
+              borderColor: "var(--color-border-2)",
+              color: "var(--color-muted)",
+            }}
+          >
+            Salir
+          </button>
+        </form>
       </div>
     </header>
   );
