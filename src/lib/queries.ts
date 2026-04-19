@@ -617,16 +617,14 @@ export async function fetchAccountMovements(): Promise<AccountMovement[]> {
   const [paysRes, mainsRes, expsRes] = await Promise.all([
     supabase
       .from("payments")
-      .select("id, account_id, paid_at, amount, currency, description, projects(name, clients(name))")
+      .select("id, account_id, paid_at, due_date, amount, currency, description, projects(name, clients(name))")
       .eq("status", "cobrado")
-      .not("account_id", "is", null)
-      .not("paid_at", "is", null),
+      .not("account_id", "is", null),
     supabase
       .from("maintenance_payments")
-      .select("id, account_id, paid_at, amount, currency, maintenances(description, clients(name))")
+      .select("id, account_id, paid_at, due_date, amount, currency, maintenances(description, clients(name))")
       .eq("status", "cobrado")
-      .not("account_id", "is", null)
-      .not("paid_at", "is", null),
+      .not("account_id", "is", null),
     supabase
       .from("expense_payments")
       .select("id, account_id, paid_at, amount, currency, expenses(name, category)")
@@ -637,7 +635,8 @@ export async function fetchAccountMovements(): Promise<AccountMovement[]> {
   type PayRow = {
     id: string;
     account_id: string;
-    paid_at: string;
+    paid_at: string | null;
+    due_date: string | null;
     amount: number | string;
     currency: Currency;
     description: string | null;
@@ -646,7 +645,8 @@ export async function fetchAccountMovements(): Promise<AccountMovement[]> {
   type MainRow = {
     id: string;
     account_id: string;
-    paid_at: string;
+    paid_at: string | null;
+    due_date: string | null;
     amount: number | string;
     currency: Currency;
     maintenances: {
@@ -663,29 +663,33 @@ export async function fetchAccountMovements(): Promise<AccountMovement[]> {
     expenses: { name: string | null; category: string | null } | null;
   };
 
-  const fromPays: AccountMovement[] = ((paysRes.data ?? []) as unknown as PayRow[]).map((r) => ({
-    id: `pay-${r.id}`,
-    account_id: r.account_id,
-    date: r.paid_at,
-    kind: "ingreso",
-    source: "proyecto",
-    description: r.description ?? "Cobro de proyecto",
-    counterpart: r.projects?.clients?.name ?? r.projects?.name ?? "—",
-    amount: Number(r.amount ?? 0),
-    currency: r.currency,
-  }));
+  const fromPays: AccountMovement[] = ((paysRes.data ?? []) as unknown as PayRow[])
+    .filter((r) => r.paid_at || r.due_date)
+    .map((r) => ({
+      id: `pay-${r.id}`,
+      account_id: r.account_id,
+      date: (r.paid_at ?? r.due_date) as string,
+      kind: "ingreso",
+      source: "proyecto",
+      description: r.description ?? "Cobro de proyecto",
+      counterpart: r.projects?.clients?.name ?? r.projects?.name ?? "—",
+      amount: Number(r.amount ?? 0),
+      currency: r.currency,
+    }));
 
-  const fromMains: AccountMovement[] = ((mainsRes.data ?? []) as unknown as MainRow[]).map((r) => ({
-    id: `main-${r.id}`,
-    account_id: r.account_id,
-    date: r.paid_at,
-    kind: "ingreso",
-    source: "mantenimiento",
-    description: r.maintenances?.description ?? "Mantenimiento",
-    counterpart: r.maintenances?.clients?.name ?? "—",
-    amount: Number(r.amount ?? 0),
-    currency: r.currency,
-  }));
+  const fromMains: AccountMovement[] = ((mainsRes.data ?? []) as unknown as MainRow[])
+    .filter((r) => r.paid_at || r.due_date)
+    .map((r) => ({
+      id: `main-${r.id}`,
+      account_id: r.account_id,
+      date: (r.paid_at ?? r.due_date) as string,
+      kind: "ingreso",
+      source: "mantenimiento",
+      description: r.maintenances?.description ?? "Mantenimiento",
+      counterpart: r.maintenances?.clients?.name ?? "—",
+      amount: Number(r.amount ?? 0),
+      currency: r.currency,
+    }));
 
   const fromExps: AccountMovement[] = ((expsRes.data ?? []) as unknown as ExpRow[]).map((r) => ({
     id: `exp-${r.id}`,
