@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
-import { ErrorText, FormActions } from "@/components/ui/Field";
+import { ErrorText, FormActions, Select } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { DeleteButton } from "@/components/actions/DeleteButton";
 import {
@@ -57,16 +57,19 @@ export function ProspectActions({ prospect }: Props) {
       className="mt-3 flex items-center gap-1.5 flex-wrap"
       onClick={(e) => e.stopPropagation()}
     >
-      <select
-        value={prospect.stage}
-        onChange={(e) => onStageChange(e.target.value)}
-        disabled={pendingStage}
-        className="bg-[var(--color-surface-2)] border border-[var(--color-border-2)] rounded-[6px] px-2 py-1 mono text-[0.62rem] uppercase tracking-wider outline-none"
-      >
-        {PROSPECT_STAGES.map((s) => (
-          <option key={s.key} value={s.key}>{s.label}</option>
-        ))}
-      </select>
+      <div className="min-w-[140px]">
+        <Select
+          size="xs"
+          value={prospect.stage}
+          onChange={(e) => onStageChange(e.target.value)}
+          disabled={pendingStage}
+          aria-label="Etapa"
+        >
+          {PROSPECT_STAGES.map((s) => (
+            <option key={s.key} value={s.key}>{s.label}</option>
+          ))}
+        </Select>
+      </div>
       {!alreadyConverted && (
         <Button
           type="button"

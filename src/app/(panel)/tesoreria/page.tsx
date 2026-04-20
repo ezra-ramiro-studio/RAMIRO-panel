@@ -1,6 +1,7 @@
 import { Card, SectionTitle } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Field";
 import { AccountDialog } from "@/components/dialogs/AccountDialog";
 import { AccountMovementsDialog } from "@/components/dialogs/AccountMovementsDialog";
 import { DeleteButton } from "@/components/actions/DeleteButton";
@@ -79,16 +80,14 @@ export default async function TesoreriaPage({
         <SectionTitle kicker="Fin 01">Tesorería</SectionTitle>
         <div className="flex items-center gap-2 flex-wrap">
           <form method="get" className="flex items-center gap-2">
-            <select
-              name="period"
-              defaultValue={period}
-              className="bg-[var(--color-surface)] border border-[var(--color-border-2)] rounded-[7px] px-3 py-1.5 text-[0.8rem] outline-none"
-            >
-              <option value="mes">Mes actual</option>
-              <option value="trimestre">Últimos 3 meses</option>
-              <option value="ano">Año en curso</option>
-              <option value="todo">Histórico</option>
-            </select>
+            <div className="min-w-[180px]">
+              <Select size="sm" name="period" defaultValue={period} aria-label="Período">
+                <option value="mes">Mes actual</option>
+                <option value="trimestre">Últimos 3 meses</option>
+                <option value="ano">Año en curso</option>
+                <option value="todo">Histórico</option>
+              </Select>
+            </div>
             <Button type="submit" variant="ghost">Aplicar</Button>
           </form>
           <AccountDialog users={users} trigger={<Button tone="fin">+ Nueva cuenta</Button>} />

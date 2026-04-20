@@ -1,5 +1,6 @@
 import { Card, SectionTitle } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
+import { Select } from "@/components/ui/Field";
 import { profitabilityByClient, profitabilityByProject } from "@/lib/queries";
 import { formatCurrency } from "@/lib/format";
 
@@ -21,12 +22,14 @@ export default async function RentabilidadPage() {
     <div className="flex flex-col gap-8">
       <div className="flex items-start justify-between">
         <SectionTitle kicker="Fin 04">Rentabilidad</SectionTitle>
-        <select className="bg-[var(--color-surface)] border border-[var(--color-border-2)] rounded-[7px] px-3 py-1.5 text-[0.8rem] outline-none">
-          <option>Todo el período</option>
-          <option>Mes actual</option>
-          <option>Trimestre</option>
-          <option>Año</option>
-        </select>
+        <div className="min-w-[180px]">
+          <Select size="sm" aria-label="Período">
+            <option value="todo">Todo el período</option>
+            <option value="mes">Mes actual</option>
+            <option value="trimestre">Trimestre</option>
+            <option value="ano">Año</option>
+          </Select>
+        </div>
       </div>
 
       <div>

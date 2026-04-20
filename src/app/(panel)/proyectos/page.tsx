@@ -3,6 +3,7 @@ import { Card, SectionTitle } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { Stat } from "@/components/ui/Stat";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Field";
 import { ProjectDialog } from "@/components/dialogs/ProjectDialog";
 import {
   fetchClients,
@@ -289,18 +290,14 @@ function FilterSelect({
   children: React.ReactNode;
 }) {
   return (
-    <label className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 min-w-[160px]">
       <span className="mono text-[0.62rem] uppercase tracking-[0.14em] text-[var(--color-muted)]">
         {label}
       </span>
-      <select
-        name={name}
-        defaultValue={value}
-        className="bg-[var(--color-surface)] border border-[var(--color-border-2)] rounded-[7px] px-3 py-1.5 text-[0.8rem] outline-none"
-      >
+      <Select size="sm" name={name} defaultValue={value} aria-label={label}>
         {children}
-      </select>
-    </label>
+      </Select>
+    </div>
   );
 }
 
